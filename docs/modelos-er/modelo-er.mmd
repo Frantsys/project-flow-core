@@ -1,0 +1,142 @@
+erDiagram
+    USER {
+        ObjectId _id PK
+        string name
+        string email UK
+        datetime emailVerified
+        string image
+        string passwordHash "Opcional - apenas login local"
+        datetime createdAt
+    }
+
+    ACCOUNT {
+        ObjectId _id PK
+        ObjectId userId FK
+        string type "oauth"
+        string provider "google | github"
+        string providerAccountId
+        string access_token
+        string refresh_token
+        int expires_at
+        string token_type
+        string scope
+        string id_token
+    }
+
+    WORKSPACE {
+        ObjectId _id PK
+        ObjectId ownerId FK
+        string name
+        string slug UK
+        datetime createdAt
+    }
+
+    WORKSPACE_MEMBER {
+        ObjectId _id PK
+        ObjectId workspaceId FK
+        ObjectId userId FK
+        string role
+        datetime joinedAt
+    }
+
+    PROJECT {
+        ObjectId _id PK
+        ObjectId workspaceId FK
+        string key
+        string name
+        string description
+        string_array statuses
+        datetime createdAt
+    }
+
+    SPRINT {
+        ObjectId _id PK
+        ObjectId projectId FK
+        string name
+        string goal
+        string status
+        datetime startDate
+        datetime endDate
+    }
+
+    TASK {
+        ObjectId _id PK
+        ObjectId projectId FK
+        ObjectId sprintId FK
+        ObjectId reporterId FK
+        ObjectId assigneeId FK
+        string code
+        string title
+        string description
+        string type
+        string status
+        string priority
+        int storyPoints
+        string_array tags
+        string aiSummary
+        datetime dueDate
+        datetime createdAt
+    }
+
+    SUBTASK {
+        ObjectId _id PK
+        ObjectId taskId FK
+        string title
+        boolean isCompleted
+        boolean generatedByAi
+        int order
+    }
+
+    COMMENT {
+        ObjectId _id PK
+        ObjectId taskId FK
+        ObjectId authorId FK
+        string content
+        datetime createdAt
+    }
+
+    DOCUMENT {
+        ObjectId _id PK
+        ObjectId workspaceId FK
+        ObjectId projectId FK
+        ObjectId authorId FK
+        ObjectId parentDocId FK
+        string title
+        string content
+        datetime updatedAt
+    }
+
+    CHANGE_HISTORY {
+        ObjectId _id PK
+        ObjectId workspaceId FK
+        ObjectId projectId FK "Opcional - nulo para docs globais"
+        ObjectId userId FK "Autor da acao"
+        string actorRole "Snapshot: OWNER | ADMIN | MEMBER"
+        string action "CREATE | MODIFY | DELETE"
+        string targetType "PROJECT | SPRINT | TASK | SUBTASK | COMMENT | DOCUMENT"
+        ObjectId targetId "ID polimorfico do registro afetado"
+        ObjectId parentId "Opcional - ex: taskId para subtasks e comments"
+        json details "targetTitle, field, oldValue, newValue"
+        datetime createdAt
+    }
+
+    USER ||--o{ ACCOUNT : "vincula"
+    USER ||--o{ WORKSPACE : "cria"
+    USER ||--o{ WORKSPACE_MEMBER : "participa"
+    WORKSPACE ||--|{ WORKSPACE_MEMBER : "possui"
+    WORKSPACE ||--o{ PROJECT : "organiza"
+    WORKSPACE ||--o{ DOCUMENT : "armazena"
+    PROJECT ||--o{ SPRINT : "planeja"
+    PROJECT ||--o{ TASK : "agrupa"
+    PROJECT |o--o{ DOCUMENT : "documenta"
+    SPRINT |o--o{ TASK : "contem"
+    USER ||--o{ TASK : "reporta"
+    USER |o--o{ TASK : "executa"
+    TASK ||--o{ SUBTASK : "divide_em"
+    TASK ||--o{ COMMENT : "recebe"
+    USER ||--o{ COMMENT : "escreve"
+    USER ||--o{ DOCUMENT : "redige"
+    DOCUMENT |o--o{ DOCUMENT : "aninha"
+    USER ||--o{ CHANGE_HISTORY : "executa"
+    WORKSPACE ||--o{ CHANGE_HISTORY : "registra"
+    PROJECT |o--o{ CHANGE_HISTORY : "agrupa"
