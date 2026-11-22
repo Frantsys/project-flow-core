@@ -2,12 +2,12 @@ import mongoose, { Document, Model, Schema, Types } from "mongoose";
 
 /**
  *  Uso de Schema e Model mongoose para mapear entidades definidas no arquivo de modelo-er
- *  mais detalhes dessa decisão arquitetural em `docs/adrs/002-uso-de-schemas-mongodb.md`
+ *  mais detalhes dessa decisão arquitetural em `docs/adrs/003-uso-de-schemas-mongodb.md`
  */
 
 
 export interface IUser extends Document {
-    name: string
+    username: string
     email: string
     emailVerified?: Date | null
     image?: string | null
@@ -18,7 +18,7 @@ export interface IUser extends Document {
 
 const UserSchema = new Schema<IUser>(
   {
-    name: { type: String, required: true, trim: true },
+    username: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     emailVerified: { type: Date, default: null },
     image: { type: String, default: null },
