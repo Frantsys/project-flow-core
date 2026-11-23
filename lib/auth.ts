@@ -59,13 +59,12 @@ export const authOptions: NextAuthOptions = {
     },
     session: {
         strategy: "jwt",
-
     },
     secret: process.env.NEXTAUTH_SECRET,
     callbacks: {
         async session({ session, token }) {
             if (session.user) {
-                (session.user as any).id = token.sub; // Adiciona ID na sessão
+                session.user.id = token.sub!; // Adiciona ID na sessão
             }
             return session;
         }
