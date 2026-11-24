@@ -78,3 +78,66 @@ export const deleteWorkspaceSchema = z.object({
 export type DeleteWorkspaceInput = z.infer<typeof deleteWorkspaceSchema>;
 
 
+export const createProjectSchema = z.object({
+  workspaceId: z
+    .string()
+    .regex(objectIdRegex, "ID de workspace inválido."),
+  name: z
+    .string()
+    .trim()
+    .min(2, "O nome do projeto deve ter pelo menos 2 caracteres.")
+    .max(60, "O nome deve ter no máximo 60 caracteres."),
+  key: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(
+      /^[A-Z][A-Z0-9]{1,9}$/,
+      "A chave deve começar com letra e ter entre 2 e 10 caracteres alfanuméricos."
+    ),
+  description: z
+    .string()
+    .trim()
+    .max(500, "A descrição deve ter no máximo 500 caracteres.")
+    .optional(),
+});
+
+export type CreateProjectInput = z.infer<typeof createProjectSchema>;
+
+
+
+export const updateProjectSchema = z
+  .object({
+    projectId: z
+      .string()
+      .regex(objectIdRegex, "ID de projeto inválido."),
+    name: z
+      .string()
+      .trim()
+      .min(2, "O nome do projeto deve ter pelo menos 2 caracteres.")
+      .max(60, "O nome deve ter no máximo 60 caracteres.")
+      .optional(),
+    description: z
+      .string()
+      .trim()
+      .max(500, "A descrição deve ter no máximo 500 caracteres.")
+      .nullable()
+      .optional(),
+  })
+  .refine(
+    (data) => data.name !== undefined || data.description !== undefined,
+    {
+      message: "Informe ao menos o nome ou a descrição para atualizar.",
+    }
+  );
+
+export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
+
+
+export const deleteProjectSchema = z.object({
+  projectId: z
+    .string()
+    .regex(objectIdRegex, "ID de projeto inválido."),
+});
+
+export type DeleteProjectInput = z.infer<typeof deleteProjectSchema>;

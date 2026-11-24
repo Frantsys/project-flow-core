@@ -1,4 +1,5 @@
 import mongoose, { Document, Model, Schema, Types } from "mongoose";
+import { SprintStatus, TaskPriority, TaskType } from "./types";
 
 /**
  *  Uso de Schema e Model mongoose para mapear entidades definidas no arquivo de modelo-er
@@ -118,8 +119,6 @@ export const Project: Model<IProject> =
 
 
 
-export type SprintStatus = "PLANNED" | "ACTIVE" | "COMPLETED";
-
 export interface ISprint extends Document {
   projectId: Types.ObjectId;
   name: string;
@@ -155,20 +154,6 @@ export const Sprint: Model<ISprint> =
  *  Agregado de tarefas, subtarefas(passos) e comentários
  *  A partir dessa região, pode haver influência de IA
  */
-
-
-/**
- *  Tipo da tarefa
- *  A princípio resume-se em 3 tipos distintos TASK  BUG  STORY
- */
-export type TaskType = "TASK" | "BUG" | "STORY";
-
-
-/**
- *  Prioridade da tarefa
- */
-export type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-
 
 /**
  *  Interfaces SubTasks e Comment são entidades children do agregado Task

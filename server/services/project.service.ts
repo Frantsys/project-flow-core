@@ -1,0 +1,180 @@
+import dbConnect from "@/lib/db";
+import { Types } from "mongoose";
+import { Workspace, Project, Sprint, Task } from "../db/models";
+import { ProjectDetailsDTO, ProjectDTO, ProjectSprintSummaryDTO, SprintStatus, TaskDTO, TaskPriority, TaskType } from "../db/types";
+
+
+interface WorkspaceIdLean {
+  _id: Types.ObjectId;
+}
+
+interface ProjectLean {
+  _id: Types.ObjectId;
+  workspaceId: Types.ObjectId;
+  name: string;
+  key: string;
+  description?: string | null;
+  statuses: string[];
+  taskSequence: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Lista todos os projetos de um workspace validando se o usuário é membro.
+ * Retorna `null` caso o workspace não exista ou o usuário não tenha acesso.
+ */
+export async function getProjectsByWorkspaceSlug(
+  workspaceSlug: string,
+  userId: string
+): Promise<ProjectDTO[] | null> {
+  if (!workspaceSlug || !Types.ObjectId.isValid(userId)) {
+    return null;
+  }
+
+  await dbConnect();
+
+  const workspace = await Workspace.findOne({
+    slug: workspaceSlug.trim().toLowerCase(),
+    "members.userId": userId,
+  })
+    .select("_id")
+    .lean<WorkspaceIdLean>();
+
+  if (!workspace) {
+    return null;
+  }
+
+  const projects = await Project.find({ workspaceId: workspace._id })
+    .select(
+      "_id workspaceId name key description statuses taskSequence createdAt updatedAt"
+    )
+    .sort({ createdAt: 1 })
+    .lean<ProjectLean[]>();
+
+  return projects.map((project) => ({
+    id: project._id.toString(),
+    workspaceId: project.workspaceId.toString(),
+    name: project.name,
+    key: project.key,
+    description: project.description ?? null,
+    statuses: project.statuses ?? [],
+    taskSequence: project.taskSequence ?? 0,
+    createdAt: new Date(project.createdAt).toISOString(),
+    updatedAt: new Date(project.updatedAt).toISOString(),
+  }));
+}
+
+interface ProjectBaseLean {
+  _id: Types.ObjectId;
+  name: string;
+  key: string;
+  description?: string | null;
+  statuses: string[];
+}
+
+interface PopulatedTaskLean {
+  _id: Types.ObjectId;
+  key: string;
+  title: string;
+  type: TaskType;
+  status: string;
+  priority: TaskPriority;
+  storyPoints?: number | null;
+  dueDate?: Date | null;
+  sprintId?: { _id: Types.ObjectId; name: string } | null;
+  assigneeId?: { _id: Types.ObjectId; image?: string | null } | null;
+}
+
+interface SprintSummaryLean {
+  _id: Types.ObjectId;
+  name: string;
+  status: SprintStatus;
+}
+
+/**
+ * Busca os detalhes completos de um projeto para montagem do quadro Kanban,
+ * garantindo que o usuário autenticado seja membro do workspace.
+ */
+export async function getProjectByKey(
+  workspaceSlug: string,
+  projectKey: string,
+  userId: string
+): Promise<ProjectDetailsDTO | null> {
+  if (!workspaceSlug || !projectKey || !Types.ObjectId.isValid(userId)) {
+    return null;
+  }
+
+  await dbConnect();
+
+  // 1. Valida acesso de membro no workspace
+  const workspace = await Workspace.findOne({
+    slug: workspaceSlug.trim().toLowerCase(),
+    "members.userId": userId,
+  })
+    .select("_id")
+    .lean<{ _id: Types.ObjectId }>();
+
+  if (!workspace) {
+    return null;
+  }
+
+  // 2. Busca o projeto pela key dentro do workspace
+  const project = await Project.findOne({
+    workspaceId: workspace._id,
+    key: projectKey.trim().toUpperCase(),
+  })
+    .select("_id name key description statuses")
+    .lean<ProjectBaseLean>();
+
+  if (!project) {
+    return null;
+  }
+
+  // 3. Carrega tasks (com sprint e assignee populados) e sprints em paralelo
+  const [rawTasks, rawSprints] = await Promise.all([
+    Task.find({ projectId: project._id })
+      .select(
+        "_id key title type status priority storyPoints dueDate sprintId assigneeId"
+      )
+      .populate("sprintId", "name")
+      .populate("assigneeId", "image")
+      .sort({ createdAt: 1 })
+      .lean<PopulatedTaskLean[]>(),
+
+    Sprint.find({ projectId: project._id })
+      .select("name status")
+      .sort({ createdAt: 1 })
+      .lean<SprintSummaryLean[]>(),
+  ]);
+
+  const tasks: TaskDTO[] = rawTasks.map((task) => ({
+    id: task._id.toString(),
+    code: task.key,
+    title: task.title,
+    type: task.type,
+    status: task.status,
+    priority: task.priority,
+    storyPoints: task.storyPoints ?? null,
+    dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,
+    sprint: task.sprintId ? { name: task.sprintId.name } : null,
+    assignee: task.assigneeId
+      ? { image: task.assigneeId.image ?? null }
+      : null,
+  }));
+
+  const sprints: ProjectSprintSummaryDTO[] = rawSprints.map((sprint) => ({
+    name: sprint.name,
+    status: sprint.status,
+  }));
+
+  return {
+    id: project._id.toString(),
+    name: project.name,
+    key: project.key,
+    description: project.description ?? null,
+    statuses: project.statuses ?? [],
+    tasks,
+    sprints,
+  };
+}
