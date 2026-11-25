@@ -33,7 +33,7 @@ const URL_ERRORS: Record<string, string> = {
 };
 
 /** Só aceita caminhos internos, para não redirecionar para outro site depois do login. */
-function safeCallback(value: string | null) {
+export function safeCallback(value: string | null) {
   return value && value.startsWith("/") && !value.startsWith("//") ? value : "/workspaces";
 }
 
@@ -126,7 +126,8 @@ export function LoginForm() {
             {pending ? "Entrando…" : "Entrar"}
           </Button>
           <FieldDescription className="text-center">
-            Não tem conta? <Link href="/auth/signup">Criar conta</Link>
+            Não tem conta?{" "}
+            <Link href={`/auth/signup?callbackUrl=${encodeURIComponent(callbackUrl)}`}>Criar conta</Link>
           </FieldDescription>
         </Field>
       </FieldGroup>

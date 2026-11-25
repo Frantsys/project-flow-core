@@ -5,7 +5,7 @@ import dbConnect from "@/lib/db";
 import { appUrl, sendEmail } from "@/lib/email";
 import { AuthToken, type AuthTokenPurpose } from "../db/models";
 
-const hash = (token: string) => createHash("sha256").update(token).digest("hex");
+export const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 
 const TOKEN_TTL: Record<AuthTokenPurpose, number> = {
   RESET_PASSWORD: 30 * 60_000,
@@ -20,7 +20,7 @@ export async function issueToken(userId: string, purpose: AuthTokenPurpose) {
   await AuthToken.create({
     userId,
     purpose,
-    tokenHash: hash(token),
+    tokenHash: hashToken(token),
     expiresAt: new Date(Date.now() + TOKEN_TTL[purpose]),
   });
   return token;
@@ -30,7 +30,7 @@ export async function issueToken(userId: string, purpose: AuthTokenPurpose) {
 export async function consumeToken(token: string, purpose: AuthTokenPurpose) {
   await dbConnect();
   const doc = await AuthToken.findOneAndDelete({
-    tokenHash: hash(token),
+    tokenHash: hashToken(token),
     purpose,
     expiresAt: { $gt: new Date() },
   }).lean<{ userId: Types.ObjectId }>();

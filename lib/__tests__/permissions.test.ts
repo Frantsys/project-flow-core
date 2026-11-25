@@ -7,6 +7,7 @@ const expected: Record<Permission, WorkspaceRole[]> = {
   "workspace.view": ["OWNER", "ADMIN", "MEMBER"],
   "workspace.update": ["OWNER", "ADMIN"],
   "workspace.delete": ["OWNER"],
+  "workspace.transfer": ["OWNER"],
   "member.manage": ["OWNER", "ADMIN"],
   "project.manage": ["OWNER", "ADMIN"],
   "sprint.manage": ["OWNER", "ADMIN"],

@@ -11,6 +11,7 @@ export const PERMISSIONS = {
   "workspace.view": EVERYONE,
   "workspace.update": MANAGERS,
   "workspace.delete": ["OWNER"],
+  "workspace.transfer": ["OWNER"],
   "member.manage": MANAGERS,
   "project.manage": MANAGERS,
   "sprint.manage": MANAGERS,

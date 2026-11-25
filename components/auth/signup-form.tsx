@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { z } from "zod";
 import { signUpSchema } from "@/server/schemas";
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { OAuthButtons } from "./oauth-buttons";
+import { safeCallback } from "./login-form";
 
 type FieldName = "username" | "email" | "password" | "confirmPassword";
 type Errors = Partial<Record<FieldName, string>>;
@@ -42,6 +43,8 @@ function firstErrors(fieldErrors: Record<string, string[] | undefined> = {}): Er
 
 export function SignupForm() {
   const router = useRouter();
+  // volta para onde a pessoa ia (ex.: um convite) depois de criar a conta
+  const callbackUrl = safeCallback(useSearchParams().get("callbackUrl"));
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -74,7 +77,7 @@ export function SignupForm() {
     });
 
     // Conta criada, mas o login automático falhou: manda para o login em vez de travar aqui
-    router.push(login && !login.error ? "/workspaces" : "/auth/login");
+    router.push(login && !login.error ? callbackUrl : "/auth/login");
     router.refresh();
   }
 
@@ -86,7 +89,7 @@ export function SignupForm() {
           <p className="text-sm text-muted-foreground">Leva menos de um minuto</p>
         </div>
 
-        <OAuthButtons callbackUrl="/workspaces" />
+        <OAuthButtons callbackUrl={callbackUrl} />
 
         {FIELDS.map((f) => (
           <Field key={f.name} data-invalid={!!errors[f.name]}>
@@ -114,7 +117,8 @@ export function SignupForm() {
             {pending ? "Criando conta…" : "Criar conta"}
           </Button>
           <FieldDescription className="text-center">
-            Já tem conta? <Link href="/auth/login">Entrar</Link>
+            Já tem conta?{" "}
+            <Link href={`/auth/login?callbackUrl=${encodeURIComponent(callbackUrl)}`}>Entrar</Link>
           </FieldDescription>
         </Field>
       </FieldGroup>

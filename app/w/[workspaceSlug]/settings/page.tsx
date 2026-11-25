@@ -14,7 +14,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserAvatar } from "@/components/user-avatar";
 import { HistoryList } from "@/components/history-list";
 import { DeleteWorkspaceCard, RenameWorkspaceForm } from "@/components/workspaces/workspace-settings-forms";
-import { AddMemberForm, MemberActions } from "@/components/workspaces/member-management";
+import {
+  InviteMemberForm,
+  MemberActions,
+  PendingInvitations,
+} from "@/components/workspaces/member-management";
+import { getPendingInvitations } from "@/server/services/invitation.service";
 
 export const metadata: Metadata = { title: "Configurações" };
 
@@ -51,6 +56,7 @@ async function Settings({
 
   const role = workspace.currentUserRole;
   const canManage = can(role, "workspace.update");
+  const invitations = can(role, "member.manage") ? await getPendingInvitations(workspace.id) : [];
   const info = { id: workspace.id, name: workspace.name, slug: workspace.slug };
   const requested = TABS.find((t) => t === tab);
   const initial =
@@ -81,8 +87,14 @@ async function Settings({
         <Card className="gap-0 py-0">
           {canManage && (
             <>
-              <AddMemberForm workspaceId={workspace.id} />
+              <InviteMemberForm workspaceId={workspace.id} />
               <Separator />
+              {invitations.length > 0 && (
+                <>
+                  <PendingInvitations workspaceId={workspace.id} invitations={invitations} />
+                  <Separator />
+                </>
+              )}
             </>
           )}
           <div className="overflow-x-auto">

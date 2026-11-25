@@ -1,10 +1,18 @@
 "use client";
 
-import { canChangeRole, canRemoveMember } from "@/lib/permissions";
+import { can, canChangeRole, canRemoveMember } from "@/lib/permissions";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { addMemberAction, removeMemberAction, updateMemberRoleAction } from "@/server/actions/member.actions";
+import {
+  inviteMemberAction,
+  removeMemberAction,
+  revokeInvitationAction,
+  transferOwnershipAction,
+  updateMemberRoleAction,
+} from "@/server/actions/member.actions";
+import type { PendingInvitationDTO } from "@/server/services/invitation.service";
+import { fullDate } from "@/lib/labels";
 import { roleLabel } from "@/lib/labels";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,8 +34,8 @@ import type { WorkspaceRole } from "@/server/db/models";
 
 type Role = "ADMIN" | "MEMBER";
 
-/** Adiciona alguém que já tem conta no Project Flow, pelo e-mail. */
-export function AddMemberForm({ workspaceId }: { workspaceId: string }) {
+/** Convida alguém por e-mail; a pessoa entra no workspace ao aceitar o link, com ou sem conta. */
+export function InviteMemberForm({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("MEMBER");
@@ -40,21 +48,21 @@ export function AddMemberForm({ workspaceId }: { workspaceId: string }) {
       onSubmit={(e) => {
         e.preventDefault();
         startTransition(async () => {
-          const result = await addMemberAction({ workspaceId, email, role });
+          const result = await inviteMemberAction({ workspaceId, email, role });
           if (!result.success) {
             setError(result.fieldErrors?.email?.[0] ?? result.error);
             return;
           }
           setError(undefined);
           setEmail("");
-          toast.success(`${result.data.name} agora faz parte do workspace.`);
+          toast.success(`Convite enviado para ${result.data.email}.`);
           router.refresh();
         });
       }}
     >
       <div className="flex w-full flex-wrap items-end gap-2">
         <Field data-invalid={!!error} className="min-w-0 flex-[1_1_260px]">
-          <FieldLabel htmlFor="member-email">Adicionar pessoa por e-mail</FieldLabel>
+          <FieldLabel htmlFor="member-email">Convidar pessoa por e-mail</FieldLabel>
           <Input
             id="member-email"
             type="email"
@@ -80,14 +88,14 @@ export function AddMemberForm({ workspaceId }: { workspaceId: string }) {
         </Field>
         <Button type="submit" disabled={pending || !email}>
           {pending && <Spinner />}
-          Adicionar
+          Convidar
         </Button>
       </div>
       {error ? (
         <FieldError id="member-email-error">{error}</FieldError>
       ) : (
         <p id="member-email-help" className="text-[13px] text-muted-foreground">
-          A pessoa precisa já ter uma conta no Project Flow.
+          Enviaremos um link válido por 7 dias. Quem ainda não tem conta cria uma ao aceitar.
         </p>
       )}
     </form>
@@ -110,6 +118,7 @@ export function MemberActions({ workspaceId, member, currentUser }: MemberAction
   const isSelf = member.id === currentUser.id;
   const canEditRole = canChangeRole(currentUser.role, member.role, isSelf);
   const canRemove = canRemoveMember(currentUser.role, member.role, isSelf);
+  const canTransfer = can(currentUser.role, "workspace.transfer") && !isSelf;
 
   function run(
     action: () => Promise<{ success: true } | { success: false; error: string }>,
@@ -150,6 +159,37 @@ export function MemberActions({ workspaceId, member, currentUser }: MemberAction
           </SelectContent>
         </Select>
       )}
+      {canTransfer && (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="ghost" size="sm">
+              Tornar dono
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Passar a posse para {member.name}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {member.name} vira dono do workspace e você passa a ser admin. Só o novo dono pode excluir o
+                workspace ou devolver a posse.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() =>
+                  run(
+                    () => transferOwnershipAction({ workspaceId, userId: member.id }),
+                    `${member.name} agora é o dono do workspace.`
+                  )
+                }
+              >
+                Passar a posse
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
       {canRemove && (
         <AlertDialog>
           <AlertDialogTrigger asChild>
@@ -162,7 +202,7 @@ export function MemberActions({ workspaceId, member, currentUser }: MemberAction
               <AlertDialogTitle>{isSelf ? "Sair do workspace?" : `Remover ${member.name}?`}</AlertDialogTitle>
               <AlertDialogDescription>
                 {isSelf
-                  ? "Você perde o acesso aos projetos e documentos. Para voltar, alguém precisa adicionar você de novo."
+                  ? "Você perde o acesso aos projetos e documentos. Para voltar, alguém precisa convidar você de novo."
                   : `${member.name} perde o acesso aos projetos e documentos. As tarefas atribuídas continuam com o nome dessa pessoa.`}
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -185,5 +225,75 @@ export function MemberActions({ workspaceId, member, currentUser }: MemberAction
         </AlertDialog>
       )}
     </div>
+  );
+}
+
+/** Convites enviados e ainda válidos, com reenvio e cancelamento. */
+export function PendingInvitations({
+  workspaceId,
+  invitations,
+}: {
+  workspaceId: string;
+  invitations: PendingInvitationDTO[];
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  function run(
+    action: () => Promise<{ success: true } | { success: false; error: string }>,
+    message: string
+  ) {
+    startTransition(async () => {
+      const result = await action();
+      if (!result.success) return void toast.error(result.error);
+      toast.success(message);
+      router.refresh();
+    });
+  }
+
+  return (
+    <section aria-labelledby="pending-invites" className="flex flex-col gap-2 p-4">
+      <h2 id="pending-invites" className="text-sm font-semibold">
+        Convites pendentes ({invitations.length})
+      </h2>
+      <ul className="flex flex-col divide-y">
+        {invitations.map((inv) => (
+          <li key={inv.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm">
+            <span className="min-w-0 flex-1 truncate font-medium">{inv.email}</span>
+            <span className="text-xs text-muted-foreground">
+              {roleLabel[inv.role]} · vence em {fullDate(inv.expiresAt)}
+              {inv.invitedBy && ` · por ${inv.invitedBy}`}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={pending}
+              onClick={() =>
+                run(
+                  () => inviteMemberAction({ workspaceId, email: inv.email, role: inv.role }),
+                  `Convite reenviado para ${inv.email}.`
+                )
+              }
+            >
+              Reenviar
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive-text"
+              disabled={pending}
+              onClick={() =>
+                run(
+                  () => revokeInvitationAction({ workspaceId, invitationId: inv.id }),
+                  `Convite para ${inv.email} cancelado.`
+                )
+              }
+            >
+              Cancelar
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
