@@ -599,3 +599,71 @@ A API do Claude não tem plano gratuito, mas o custo de um portfólio fica em ce
   subtarefas (8.1, 8.2, 8.5) e API pública v1 só leitura com tokens e OpenAPI (parte de 8.6).
   Ficam para depois: texto livre virando tarefas (8.3), assistente do documento (8.4), escrita e
   webhooks na API, integração com GitHub e inglês (6.9).
+
+## Balanço depois dos 8 marcos (25/11/2026)
+
+Tudo que o plano previa e ainda não existe, agrupado pelo que destrava cada item.
+
+### Precisa de uma ação sua (conta, chave ou configuração)
+
+| Item                                 | O que falta                                                                                     | Etapa         |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------- | ------------- |
+| E-mails de verdade                   | `RESEND_API_KEY` na Vercel; para enviar a qualquer pessoa, um domínio verificado e `EMAIL_FROM` | 1.3, 3.6, 5.2 |
+| IA na tarefa                         | `ANTHROPIC_API_KEY` na Vercel (o código já está em produção, escondido)                         | 8.1, 8.2      |
+| Deploy por PR e testes ponta a ponta | ligar a Vercel ao GitHub e proteger a `main` (exigir PR e CI verde)                             | 0.2, 0.4      |
+| Métricas de uso e desempenho         | ligar Web Analytics e Speed Insights no painel da Vercel                                        | 7.1           |
+| Tempo real                           | conta gratuita no Pusher ou Ably                                                                | 5.3           |
+| Anexos e fotos                       | Blob store na Vercel (cria uma chave de acesso)                                                 | 3.5, 6.4      |
+| Erros e logs                         | conta no Sentry e um log drain (Axiom ou Better Stack)                                          | 2.5           |
+| Jobs agendados                       | `CRON_SECRET` na Vercel para proteger as rotas de cron                                          | 2.6           |
+| Segredos OAuth                       | confirmar que os do Google e do GitHub foram trocados                                           | 1.8           |
+
+### Dá para fazer só com código
+
+**Segurança e contas**
+
+- Encerrar as outras sessões ao trocar a senha ou ligar a verificação em duas etapas (hoje a sessão
+  é um JWT e continua valendo até expirar).
+- Exigir e-mail confirmado para ações sensíveis (convidar, excluir workspace) (1.3).
+- Exportar meus dados em JSON e lista de sessões em Minha conta (1.5).
+- Papel Convidado, só leitura (1.7).
+- CSP com nonce em vez de `'unsafe-inline'` e conferir a nota no securityheaders.com (1.4).
+- Migração para o Auth.js v5, quando sair do beta (1.1).
+
+**Domínio**
+
+- Épicos e relações entre tarefas (bloqueia, duplica) (3.3).
+- Etiquetas por workspace, com cor e filtro (3.5).
+- Ao remover um membro, oferecer reatribuir as tarefas dele (3.6).
+- Proteção contra sobrescrita também na descrição da tarefa (3.7).
+- Paginação do histórico e revisão de índices (3.8); slug do workspace editável (3.9).
+
+**Produto e interface**
+
+- Atalhos de teclado além de Ctrl K e `/` (C, G B, J/K, `?`) (4.4).
+- Visões salvas e agrupamento por responsável no quadro (4.2).
+- Depois do login, ir para Minhas tarefas ou o último workspace (4.5).
+- Roadmap de épicos (4.6), burndown e fluxo cumulativo (4.7, depende dos jobs agendados).
+- Editor rico, versões e mover documentos na árvore (4.8); modelos de projeto (4.9).
+- Lixeira com restauração por 30 dias e "Desfazer" no aviso (6.2, 6.3).
+- Formulários com react-hook-form e atualização otimista fora do quadro (6.1, 6.2).
+- Quadro no celular em abas por coluna e tabelas virando cartões (6.7).
+- Auditoria de acessibilidade com axe em todas as telas (6.8); inglês (6.9).
+- Cores e ícones por projeto e transições entre visões (6.10).
+
+**Plataforma**
+
+- Leituras com cache por tags em vez de `revalidatePath` (2.4) e camada única de acesso a dados (2.2).
+- Menos consultas em sequência ao abrir um projeto e carregamento sob demanda de partes pesadas (7.2, 7.3).
+- Escrita e webhooks na API pública, integração com o GitHub (8.6); texto livre virando tarefas e
+  assistente do documento (8.3, 8.4).
+- Changelog público e página de status (9.5).
+
+### Ordem sugerida
+
+1. **Ligar a Vercel ao GitHub e escrever os testes ponta a ponta (Playwright).** É o que mais protege
+   tudo o que já existe: cada PR passa a ter preview e roteiro testado.
+2. **Encerrar sessões ao trocar a senha.** É a lacuna de segurança mais concreta que sobrou.
+3. **Resend e Anthropic.** Duas chaves que acendem recursos já prontos (convites, recuperação de senha,
+   notificações por e-mail e IA).
+4. **Etiquetas, lixeira e atalhos.** São os itens de produto mais visíveis para quem usa todo dia.
