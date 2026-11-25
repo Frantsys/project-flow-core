@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Check, ChevronsUpDown, House, Plus, SlidersHorizontal } from "lucide-react";
+import { Check, ChevronsUpDown, FileText, House, Plus, SlidersHorizontal } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -40,6 +40,7 @@ export function AppSidebar({ user, workspace, workspaces }: AppSidebarProps) {
 
   const nav = [
     { href: base, label: "Visão geral", icon: House, active: pathname === base },
+    { href: `${base}/docs`, label: "Documentos", icon: FileText, active: pathname.startsWith(`${base}/docs`) },
     { href: `${base}/settings`, label: "Configurações", icon: SlidersHorizontal, active: pathname.startsWith(`${base}/settings`) },
   ];
 

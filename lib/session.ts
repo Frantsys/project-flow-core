@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "./auth";
 import { getWorkspaceBySlug } from "@/server/services/workspace.service";
+import { getWorkspaceDocuments } from "@/server/services/document.service";
 
 export interface CurrentUser {
   id: string;
@@ -30,3 +31,6 @@ export const requireUser = cache(async (): Promise<CurrentUser> => {
 
 // Deduplica a busca do workspace entre o layout (sidebar) e a página na mesma requisição
 export const getWorkspace = cache(getWorkspaceBySlug);
+
+// Árvore de documentos: usada pelo layout (navegação) e pela página (trilha) na mesma requisição
+export const getDocuments = cache(getWorkspaceDocuments);
