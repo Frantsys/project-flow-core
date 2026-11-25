@@ -1,5 +1,6 @@
 "use client";
 
+import { canChangeRole, canRemoveMember } from "@/lib/permissions";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -107,12 +108,8 @@ export function MemberActions({ workspaceId, member, currentUser }: MemberAction
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const isSelf = member.id === currentUser.id;
-  const isOwner = member.role === "OWNER";
-  const canEditRole =
-    !isOwner &&
-    !isSelf &&
-    (currentUser.role === "OWNER" || (currentUser.role === "ADMIN" && member.role === "MEMBER"));
-  const canRemove = !isOwner && (isSelf || canEditRole);
+  const canEditRole = canChangeRole(currentUser.role, member.role, isSelf);
+  const canRemove = canRemoveMember(currentUser.role, member.role, isSelf);
 
   function run(
     action: () => Promise<{ success: true } | { success: false; error: string }>,

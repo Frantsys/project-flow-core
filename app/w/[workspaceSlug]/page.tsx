@@ -1,3 +1,4 @@
+import { can } from "@/lib/permissions";
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -50,7 +51,7 @@ async function Overview({ params }: { params: Promise<{ workspaceSlug: string }>
 
   if (!workspace || !projects || !activity) notFound();
 
-  const canManage = workspace.currentUserRole !== "MEMBER";
+  const canManage = can(workspace.currentUserRole, "project.manage");
   const newProject = canManage ? (
     <CreateProjectDialog
       workspaceId={workspace.id}

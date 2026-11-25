@@ -5,7 +5,8 @@ import { Types } from "mongoose";
 import dbConnect from "@/lib/db";
 import { Project, Sprint, Task, User, Workspace } from "../db/models";
 import { createAction, fail } from "../lib/action";
-import { ALL_ROLES, requireWorkspaceRole } from "../lib/access";
+import { can } from "@/lib/permissions";
+import { requirePermission } from "../lib/access";
 import { recordHistory } from "../services/history.service";
 import {
   addCommentSchema,
@@ -72,7 +73,7 @@ async function loadTask(taskId: string, userId: string) {
     .lean<ProjectForTaskLean>();
   if (!project) fail("Projeto não encontrado.");
 
-  const role = await requireWorkspaceRole(project.workspaceId.toString(), userId, ALL_ROLES);
+  const role = await requirePermission(project.workspaceId.toString(), userId, "task.edit");
 
   const history = (
     action: "CREATE" | "MODIFY" | "DELETE",
@@ -110,7 +111,7 @@ export const createTaskAction = createAction({
       .lean<ProjectForTaskLean>();
     if (!project) fail("Projeto não encontrado.");
 
-    const role = await requireWorkspaceRole(project.workspaceId.toString(), userId, ALL_ROLES);
+    const role = await requirePermission(project.workspaceId.toString(), userId, "task.edit");
 
     const status = wanted || project.statuses[0];
     if (!status || !project.statuses.includes(status)) {
@@ -269,7 +270,7 @@ export const deleteTaskAction = createAction({
   schema: taskIdSchema,
   handler: async ({ taskId }, { userId }) => {
     const { task, role, history } = await loadTask(taskId, userId);
-    if (role === "MEMBER" && task.reporterId.toString() !== userId) {
+    if (!can(role, "task.deleteAny") && task.reporterId.toString() !== userId) {
       fail("Só quem criou a tarefa, um admin ou o dono pode excluí-la.");
     }
 
@@ -370,7 +371,7 @@ export const deleteCommentAction = createAction({
 
     const comment = task.comments.find((c) => c._id.toString() === commentId);
     if (!comment) fail("Comentário não encontrado.");
-    if (role === "MEMBER" && comment.authorId.toString() !== userId) {
+    if (!can(role, "comment.deleteAny") && comment.authorId.toString() !== userId) {
       fail("Você só pode excluir os seus comentários.");
     }
 

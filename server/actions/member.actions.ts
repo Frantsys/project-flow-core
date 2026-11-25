@@ -5,7 +5,8 @@ import { Types } from "mongoose";
 import dbConnect from "@/lib/db";
 import { User, Workspace, WorkspaceRole } from "../db/models";
 import { createAction, fail } from "../lib/action";
-import { ALL_ROLES, MANAGERS, requireWorkspaceRole } from "../lib/access";
+import { canChangeRole, canRemoveMember } from "@/lib/permissions";
+import { requirePermission } from "../lib/access";
 import { addMemberSchema, memberRefSchema, updateMemberRoleSchema } from "../schemas";
 
 interface WorkspaceMembersLean {
@@ -40,7 +41,7 @@ export const addMemberAction = createAction({
   name: "member.add",
   schema: addMemberSchema,
   handler: async ({ workspaceId, email, role }, { userId }) => {
-    await requireWorkspaceRole(workspaceId, userId, MANAGERS);
+    await requirePermission(workspaceId, userId, "member.manage");
     await dbConnect();
 
     const user = await User.findOne({ email })
@@ -71,11 +72,11 @@ export const updateMemberRoleAction = createAction({
   name: "member.updateRole",
   schema: updateMemberRoleSchema,
   handler: async ({ workspaceId, userId: targetId, role }, { userId }) => {
-    const actorRole = await requireWorkspaceRole(workspaceId, userId, MANAGERS);
+    const actorRole = await requirePermission(workspaceId, userId, "member.manage");
     const { target, isOwner } = await loadTargetMember(workspaceId, targetId);
 
     if (isOwner) fail("O papel do dono não pode ser alterado.");
-    if (actorRole === "ADMIN" && (target.role === "ADMIN" || targetId === userId)) {
+    if (!canChangeRole(actorRole, target.role, targetId === userId)) {
       fail("Só o dono pode alterar o papel de um admin.");
     }
 
@@ -98,11 +99,15 @@ export const removeMemberAction = createAction({
   schema: memberRefSchema,
   handler: async ({ workspaceId, userId: targetId }, { userId }) => {
     const isSelf = targetId === userId;
-    const actorRole = await requireWorkspaceRole(workspaceId, userId, isSelf ? ALL_ROLES : MANAGERS);
+    const actorRole = await requirePermission(
+      workspaceId,
+      userId,
+      isSelf ? "workspace.view" : "member.manage"
+    );
     const { target, isOwner } = await loadTargetMember(workspaceId, targetId);
 
     if (isOwner) fail("O dono não pode ser removido do workspace.");
-    if (!isSelf && actorRole === "ADMIN" && target.role === "ADMIN") fail("Só o dono pode remover um admin.");
+    if (!canRemoveMember(actorRole, target.role, isSelf)) fail("Só o dono pode remover um admin.");
 
     await Workspace.updateOne({ _id: workspaceId }, { $pull: { members: { userId: target.userId } } });
 

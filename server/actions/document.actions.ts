@@ -5,7 +5,7 @@ import mongoose, { Types } from "mongoose";
 import dbConnect from "@/lib/db";
 import { DocumentModel, Project } from "../db/models";
 import { createAction, fail } from "../lib/action";
-import { ALL_ROLES, requireWorkspaceRole } from "../lib/access";
+import { requirePermission } from "../lib/access";
 import { recordHistory } from "../services/history.service";
 import { createDocumentSchema, documentIdSchema, updateDocumentSchema } from "../schemas";
 
@@ -25,7 +25,7 @@ async function loadDocument(documentId: string, userId: string) {
   await dbConnect();
   const doc = await DocumentModel.findById(documentId).select("workspaceId projectId title").lean<DocLean>();
   if (!doc) fail("Documento não encontrado.");
-  const role = await requireWorkspaceRole(doc.workspaceId.toString(), userId, ALL_ROLES);
+  const role = await requirePermission(doc.workspaceId.toString(), userId, "document.edit");
   return { doc, role };
 }
 
@@ -33,7 +33,7 @@ export const createDocumentAction = createAction({
   name: "document.create",
   schema: createDocumentSchema,
   handler: async ({ workspaceId, parentId, title, projectId: requestedProjectId }, { userId }) => {
-    const role = await requireWorkspaceRole(workspaceId, userId, ALL_ROLES);
+    const role = await requirePermission(workspaceId, userId, "document.edit");
     await dbConnect();
 
     let projectId = requestedProjectId ?? null;

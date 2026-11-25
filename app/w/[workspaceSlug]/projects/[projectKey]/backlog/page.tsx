@@ -1,3 +1,4 @@
+import { can } from "@/lib/permissions";
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -42,7 +43,7 @@ async function Backlog({ params }: { params: Promise<{ workspaceSlug: string; pr
 
   if (!workspace || !project) notFound();
 
-  const canPlan = workspace.currentUserRole !== "MEMBER";
+  const canPlan = can(workspace.currentUserRole, "sprint.manage");
   const base = `/w/${workspace.slug}/projects/${project.key}`;
   const doneStatus = project.statuses[project.statuses.length - 1];
   const sprints = [...project.sprints].sort((a, b) => ORDER[a.status] - ORDER[b.status]);

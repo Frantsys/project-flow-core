@@ -1,18 +1,20 @@
 import "server-only";
+import { PERMISSIONS, type Permission } from "@/lib/permissions";
 import type { WorkspaceRole } from "../db/models";
 import { verifyWorkspacePermission } from "../services/permission.service";
 import { fail } from "./action";
 
-export const ALL_ROLES: WorkspaceRole[] = ["OWNER", "ADMIN", "MEMBER"];
-export const MANAGERS: WorkspaceRole[] = ["OWNER", "ADMIN"];
-
-/** Garante que o usuário tem um dos papéis no workspace e devolve o papel; senão interrompe a action. */
-export async function requireWorkspaceRole(
+/** Garante que o papel do usuário no workspace tem a permissão e devolve o papel; senão interrompe a action. */
+export async function requirePermission(
   workspaceId: string,
   userId: string,
-  allowedRoles: WorkspaceRole[]
+  permission: Permission
 ): Promise<WorkspaceRole> {
-  const permission = await verifyWorkspacePermission({ workspaceId, userId, allowedRoles });
-  if (!permission.authorized) fail(permission.error);
-  return permission.role;
+  const result = await verifyWorkspacePermission({
+    workspaceId,
+    userId,
+    allowedRoles: [...PERMISSIONS[permission]],
+  });
+  if (!result.authorized) fail(result.error);
+  return result.role;
 }

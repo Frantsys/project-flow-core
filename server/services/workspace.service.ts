@@ -11,6 +11,7 @@ import mongoose, { Types } from "mongoose";
 import { UpdateWorkspaceInput } from "../schemas";
 import { ActionResult } from "@/types";
 import { verifyWorkspacePermission } from "./permission.service";
+import { PERMISSIONS } from "@/lib/permissions";
 
 export async function getUserWorkspaces(userId: string): Promise<WorkspaceSummaryDTO[]> {
   await dbConnect();
@@ -156,7 +157,7 @@ export async function updateWorkspace(
   const permission = await verifyWorkspacePermission({
     workspaceId: input.workspaceId,
     userId,
-    allowedRoles: ["ADMIN", "OWNER"],
+    allowedRoles: [...PERMISSIONS["workspace.update"]],
   });
 
   if (!permission.authorized) {
@@ -204,7 +205,7 @@ export async function deleteWorkspace(
   const permission = await verifyWorkspacePermission({
     workspaceId: workspaceId,
     userId,
-    allowedRoles: ["OWNER"],
+    allowedRoles: [...PERMISSIONS["workspace.delete"]],
   });
 
   if (!permission.authorized) {

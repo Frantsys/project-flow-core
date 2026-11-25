@@ -1,5 +1,6 @@
 "use client";
 
+import { can } from "@/lib/permissions";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -83,7 +84,7 @@ export function TaskDetail({
   const [comment, setComment] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const canDeleteTask = currentUser.role !== "MEMBER" || task.reporter?.id === currentUser.id;
+  const canDeleteTask = can(currentUser.role, "task.deleteAny") || task.reporter?.id === currentUser.id;
   const doneCount = task.subtasks.filter((s) => s.isCompleted).length;
 
   /** Roda uma action, avisa o erro e atualiza os dados do servidor. */
@@ -416,7 +417,7 @@ export function TaskDetail({
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{c.author?.name ?? "Conta removida"}</span>
                   <span className="text-xs text-muted-foreground">{timeAgo(c.createdAt)}</span>
-                  {(c.author?.id === currentUser.id || currentUser.role !== "MEMBER") && (
+                  {(c.author?.id === currentUser.id || can(currentUser.role, "comment.deleteAny")) && (
                     <Button
                       variant="ghost"
                       size="icon-xs"

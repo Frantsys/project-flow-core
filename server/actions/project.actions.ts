@@ -5,7 +5,7 @@ import mongoose, { Types } from "mongoose";
 import dbConnect from "@/lib/db";
 import { ChangeHistory, DocumentModel, Project, Sprint, Task } from "../db/models";
 import { createAction, fail } from "../lib/action";
-import { MANAGERS, requireWorkspaceRole } from "../lib/access";
+import { requirePermission } from "../lib/access";
 import { recordHistory } from "../services/history.service";
 import { createProjectSchema, deleteProjectSchema, updateProjectSchema } from "../schemas";
 
@@ -32,7 +32,7 @@ async function loadProjectForManager(projectId: string, userId: string) {
     .lean<ProjectLean>();
   if (!project) fail("Projeto não encontrado.");
 
-  const role = await requireWorkspaceRole(project.workspaceId.toString(), userId, MANAGERS);
+  const role = await requirePermission(project.workspaceId.toString(), userId, "project.manage");
   return { project, role };
 }
 
@@ -40,7 +40,7 @@ export const createProjectAction = createAction({
   name: "project.create",
   schema: createProjectSchema,
   handler: async ({ workspaceId, name, key, description }, { userId }) => {
-    const role = await requireWorkspaceRole(workspaceId, userId, MANAGERS);
+    const role = await requirePermission(workspaceId, userId, "project.manage");
     await dbConnect();
 
     let project;

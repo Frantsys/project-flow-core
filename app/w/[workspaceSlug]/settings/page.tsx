@@ -1,3 +1,4 @@
+import { can } from "@/lib/permissions";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -49,7 +50,7 @@ async function Settings({
   if (!workspace || !history) notFound();
 
   const role = workspace.currentUserRole;
-  const canManage = role !== "MEMBER";
+  const canManage = can(role, "workspace.update");
   const info = { id: workspace.id, name: workspace.name, slug: workspace.slug };
   const requested = TABS.find((t) => t === tab);
   const initial =
@@ -66,7 +67,7 @@ async function Settings({
       {canManage && (
         <TabsContent value="geral" className="flex flex-col gap-4">
           <RenameWorkspaceForm workspace={info} />
-          {role === "OWNER" && (
+          {can(role, "workspace.delete") && (
             <DeleteWorkspaceCard
               workspace={info}
               projectsCount={workspace.stats.projectsCount}
