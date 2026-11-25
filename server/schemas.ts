@@ -188,3 +188,134 @@ export const updateTaskStatusSchema = z.object({
 });
 
 export type UpdateTaskStatusInput = z.infer<typeof updateTaskStatusSchema>;
+
+
+const nullableObjectId = z
+  .string()
+  .regex(objectIdRegex, "ID inválido.")
+  .nullable();
+
+export const updateTaskSchema = z.object({
+  taskId: z.string().regex(objectIdRegex, "ID de tarefa inválido."),
+  title: z
+    .string()
+    .trim()
+    .min(2, "O título deve ter pelo menos 2 caracteres.")
+    .max(200, "O título deve ter no máximo 200 caracteres.")
+    .optional(),
+  description: z.string().max(20000, "A descrição deve ter no máximo 20.000 caracteres.").optional(),
+  type: taskTypeSchema.optional(),
+  priority: taskPrioritySchema.optional(),
+  status: z.string().trim().min(1).max(50).optional(),
+  storyPoints: z
+    .number("Informe um número.")
+    .int("Use um número inteiro.")
+    .min(0, "Os pontos não podem ser negativos.")
+    .max(100, "Use no máximo 100 pontos.")
+    .nullable()
+    .optional(),
+  dueDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.")
+    .nullable()
+    .optional(),
+  assigneeId: nullableObjectId.optional(),
+  sprintId: nullableObjectId.optional(),
+});
+
+export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
+
+export const taskIdSchema = z.object({
+  taskId: z.string().regex(objectIdRegex, "ID de tarefa inválido."),
+});
+
+export const addSubtaskSchema = taskIdSchema.extend({
+  title: z
+    .string()
+    .trim()
+    .min(1, "Escreva a subtarefa.")
+    .max(200, "A subtarefa deve ter no máximo 200 caracteres."),
+});
+
+export const subtaskRefSchema = taskIdSchema.extend({
+  subtaskId: z.string().regex(objectIdRegex, "ID de subtarefa inválido."),
+});
+
+export const addCommentSchema = taskIdSchema.extend({
+  content: z
+    .string()
+    .trim()
+    .min(1, "Escreva o comentário.")
+    .max(5000, "O comentário deve ter no máximo 5.000 caracteres."),
+});
+
+export const commentRefSchema = taskIdSchema.extend({
+  commentId: z.string().regex(objectIdRegex, "ID de comentário inválido."),
+});
+
+
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.");
+
+export const createSprintSchema = z
+  .object({
+    projectId: z.string().regex(objectIdRegex, "ID de projeto inválido."),
+    name: z
+      .string()
+      .trim()
+      .min(2, "O nome deve ter pelo menos 2 caracteres.")
+      .max(60, "O nome deve ter no máximo 60 caracteres."),
+    goal: z.string().trim().max(300, "A meta deve ter no máximo 300 caracteres.").optional(),
+    startDate: isoDate.nullable().optional(),
+    endDate: isoDate.nullable().optional(),
+  })
+  .refine((d) => !d.startDate || !d.endDate || d.startDate <= d.endDate, {
+    message: "A data de fim deve ser depois do início.",
+    path: ["endDate"],
+  });
+
+export type CreateSprintInput = z.infer<typeof createSprintSchema>;
+
+export const sprintIdSchema = z.object({
+  sprintId: z.string().regex(objectIdRegex, "ID de sprint inválido."),
+});
+
+export const completeSprintSchema = sprintIdSchema.extend({
+  // null = tarefas abertas voltam para o backlog
+  moveToSprintId: z.string().regex(objectIdRegex, "ID de sprint inválido.").nullable(),
+});
+
+export const addMemberSchema = z.object({
+  workspaceId: z.string().regex(objectIdRegex, "ID de workspace inválido."),
+  email: z.email("Informe um e-mail válido.").trim().toLowerCase(),
+  role: z.enum(["ADMIN", "MEMBER"]),
+});
+
+export const memberRefSchema = z.object({
+  workspaceId: z.string().regex(objectIdRegex, "ID de workspace inválido."),
+  userId: z.string().regex(objectIdRegex, "ID de usuário inválido."),
+});
+
+export const updateMemberRoleSchema = memberRefSchema.extend({
+  role: z.enum(["ADMIN", "MEMBER"]),
+});
+
+export const createDocumentSchema = z.object({
+  workspaceId: z.string().regex(objectIdRegex, "ID de workspace inválido."),
+  parentId: z.string().regex(objectIdRegex, "ID inválido.").nullable().optional(),
+  projectId: z.string().regex(objectIdRegex, "ID inválido.").nullable().optional(),
+  title: z.string().trim().max(150).optional(),
+});
+
+export const updateDocumentSchema = z.object({
+  documentId: z.string().regex(objectIdRegex, "ID de documento inválido."),
+  title: z
+    .string()
+    .trim()
+    .min(1, "Dê um título ao documento.")
+    .max(150, "O título deve ter no máximo 150 caracteres."),
+  content: z.string().max(200000, "O documento passou do tamanho máximo."),
+});
+
+export const documentIdSchema = z.object({
+  documentId: z.string().regex(objectIdRegex, "ID de documento inválido."),
+});

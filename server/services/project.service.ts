@@ -83,13 +83,16 @@ interface PopulatedTaskLean {
   storyPoints?: number | null;
   dueDate?: Date | null;
   sprintId?: { _id: Types.ObjectId; name: string } | null;
-  assigneeId?: { _id: Types.ObjectId; image?: string | null } | null;
+  assigneeId?: { _id: Types.ObjectId; username: string; image?: string | null } | null;
 }
 
 interface SprintSummaryLean {
   _id: Types.ObjectId;
   name: string;
+  goal?: string;
   status: SprintStatus;
+  startDate?: Date | null;
+  endDate?: Date | null;
 }
 
 /**
@@ -138,12 +141,12 @@ export async function getProjectByKey(
         "_id code title type status priority storyPoints dueDate sprintId assigneeId"
       )
       .populate("sprintId", "name")
-      .populate("assigneeId", "image")
+      .populate("assigneeId", "username image")
       .sort({ createdAt: 1 })
       .lean<PopulatedTaskLean[]>(),
 
     Sprint.find({ projectId: project._id })
-      .select("name status")
+      .select("name goal status startDate endDate")
       .sort({ createdAt: 1 })
       .lean<SprintSummaryLean[]>(),
   ]);
@@ -157,19 +160,28 @@ export async function getProjectByKey(
     priority: task.priority,
     storyPoints: task.storyPoints ?? null,
     dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,
-    sprint: task.sprintId ? { name: task.sprintId.name } : null,
+    sprint: task.sprintId ? { id: task.sprintId._id.toString(), name: task.sprintId.name } : null,
     assignee: task.assigneeId
-      ? { image: task.assigneeId.image ?? null }
+      ? {
+          id: task.assigneeId._id.toString(),
+          name: task.assigneeId.username,
+          image: task.assigneeId.image ?? null,
+        }
       : null,
   }));
 
   const sprints: ProjectSprintSummaryDTO[] = rawSprints.map((sprint) => ({
+    id: sprint._id.toString(),
     name: sprint.name,
+    goal: sprint.goal ?? "",
     status: sprint.status,
+    startDate: sprint.startDate ? new Date(sprint.startDate).toISOString() : null,
+    endDate: sprint.endDate ? new Date(sprint.endDate).toISOString() : null,
   }));
 
   return {
     id: project._id.toString(),
+    workspaceId: workspace._id.toString(),
     name: project.name,
     key: project.key,
     description: project.description ?? null,

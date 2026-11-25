@@ -74,16 +74,23 @@ export interface TaskDTO {
   storyPoints: number | null;
   dueDate: string | null;
   sprint: {
+    id: string;
     name: string;
   } | null; // pode não ter sprint associada
   assignee: {
+    id: string;
+    name: string;
     image: string | null;
-  } | null; // o usuário associado pode não ter uma imagem de perfil
+  } | null; // a tarefa pode não ter responsável
 }
 
 export interface ProjectSprintSummaryDTO {
+  id: string;
   name: string;
+  goal: string;
   status: SprintStatus;
+  startDate: string | null;
+  endDate: string | null;
 }
 
 export interface ProjectDetailsDTO {
@@ -92,6 +99,67 @@ export interface ProjectDetailsDTO {
   key: string;
   description: string | null;
   statuses: string[];
+  workspaceId: string;
   tasks: TaskDTO[];
   sprints: ProjectSprintSummaryDTO[];
+}
+
+export interface PersonDTO {
+  id: string;
+  name: string;
+  image: string | null;
+}
+
+export interface SubtaskDTO {
+  id: string;
+  title: string;
+  isCompleted: boolean;
+  generatedByAi: boolean;
+}
+
+export interface CommentDTO {
+  id: string;
+  content: string;
+  createdAt: string;
+  author: PersonDTO | null; // autor pode ter sido removido
+}
+
+export interface HistoryEntryDTO {
+  id: string;
+  action: "CREATE" | "MODIFY" | "DELETE";
+  targetType: "PROJECT" | "SPRINT" | "TASK" | "SUBTASK" | "COMMENT" | "DOCUMENT";
+  actorRole: "OWNER" | "ADMIN" | "MEMBER";
+  user: PersonDTO | null;
+  details: {
+    targetTitle?: string;
+    field?: string;
+    oldValue?: string | null;
+    newValue?: string | null;
+  };
+  createdAt: string;
+}
+
+export interface TaskDetailDTO extends TaskDTO {
+  description: string;
+  tags: string[];
+  aiSummary: string | null;
+  reporter: PersonDTO | null;
+  subtasks: SubtaskDTO[];
+  comments: CommentDTO[];
+  history: HistoryEntryDTO[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocumentSummaryDTO {
+  id: string;
+  title: string;
+  parentId: string | null;
+  projectId: string | null;
+  updatedAt: string;
+}
+
+export interface DocumentDTO extends DocumentSummaryDTO {
+  content: string;
+  author: PersonDTO | null;
 }

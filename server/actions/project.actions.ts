@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 
 import { verifyWorkspacePermission } from "@/server/services/permission.service";
+import { recordHistory } from "@/server/services/history.service";
 import { CreateProjectInput, createProjectSchema, DeleteProjectInput, deleteProjectSchema, UpdateProjectInput, updateProjectSchema } from "../schemas";
 import { ActionResult } from "@/types";
 import { authOptions } from "@/lib/auth";
@@ -50,6 +51,17 @@ export async function createProjectAction(
       name,
       key,
       ...(description ? { description } : {}),
+    });
+
+    await recordHistory({
+      workspaceId,
+      projectId: project._id,
+      userId: session.user.id,
+      actorRole: permission.role,
+      action: "CREATE",
+      targetType: "PROJECT",
+      targetId: project._id,
+      details: { targetTitle: `${project.key} · ${project.name}` },
     });
 
     revalidatePath("/", "layout");
@@ -124,8 +136,8 @@ export async function updateProjectAction(
     await dbConnect();
 
     const existingProject = await Project.findById(projectId)
-      .select("workspaceId")
-      .lean<{ _id: Types.ObjectId; workspaceId: Types.ObjectId }>();
+      .select("workspaceId key name")
+      .lean<{ _id: Types.ObjectId; workspaceId: Types.ObjectId; key: string; name: string }>();
 
     if (!existingProject) {
       return { success: false, error: "Projeto não encontrado." };
@@ -162,6 +174,20 @@ export async function updateProjectAction(
     if (!updated) {
       return { success: false, error: "Erro ao localizar o projeto atualizado." };
     }
+
+    await recordHistory({
+      workspaceId: existingProject.workspaceId,
+      projectId: existingProject._id,
+      userId: session.user.id,
+      actorRole: permission.role,
+      action: "MODIFY",
+      targetType: "PROJECT",
+      targetId: existingProject._id,
+      details:
+        name !== undefined && name !== existingProject.name
+          ? { targetTitle: `${updated.key} · ${updated.name}`, field: "name", oldValue: existingProject.name, newValue: updated.name }
+          : { targetTitle: `${updated.key} · ${updated.name}` },
+    });
 
     revalidatePath("/", "layout");
 
@@ -222,8 +248,8 @@ export async function deleteProjectAction(
     // encontra o projeto pelo seu id e retorna também o id do workspace para validar 
     // permissões do membro
     const existingProject = await Project.findById(projectId)
-      .select("workspaceId")
-      .lean<{ _id: Types.ObjectId; workspaceId: Types.ObjectId }>();
+      .select("workspaceId key name")
+      .lean<{ _id: Types.ObjectId; workspaceId: Types.ObjectId; key: string; name: string }>();
 
     if (!existingProject) {
       return { success: false, error: "Projeto não encontrado." };
@@ -288,6 +314,18 @@ export async function deleteProjectAction(
     } finally {
       await mongosession.endSession();
     }
+
+    // registrado depois da transação (que apaga o histórico do projeto) e sem projectId, para ficar no feed do workspace
+    await recordHistory({
+      workspaceId: existingProject.workspaceId,
+      projectId: null,
+      userId: session.user.id,
+      actorRole: permission.role,
+      action: "DELETE",
+      targetType: "PROJECT",
+      targetId: existingProject._id,
+      details: { targetTitle: `${existingProject.key} · ${existingProject.name}` },
+    });
 
     revalidatePath("/", "layout");
 
