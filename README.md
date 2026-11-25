@@ -12,13 +12,16 @@ subtarefas e comentários, documentos em árvore e histórico de tudo o que mudo
   contas conectadas, exclusão da conta).
 - **Segurança:** limite de tentativas no login, cadastro e recuperação de senha; cabeçalhos HTTP de
   segurança (CSP, HSTS, `frame-ancestors`); permissões por papel numa matriz única (`lib/permissions.ts`).
-- **Workspaces** com papéis Dono, Admin e Membro; adicionar, promover e remover pessoas.
+- **Workspaces** com papéis Dono, Admin e Membro; convites por e-mail (com ou sem conta), promover,
+  remover e transferir a posse.
 - **Projetos** com chave própria (PF, WEB…); o código das tarefas é sequencial por projeto (PF-12).
-- **Quadro kanban** por status, com criação rápida em cada coluna e "Mover para…".
+- **Quadro kanban** com colunas configuráveis (nome, ordem e categoria A fazer / Em andamento /
+  Concluído), criação rápida em cada coluna e "Mover para…".
 - **Tarefa completa** num painel lateral (ou página própria pelo link): status, prioridade, tipo,
   responsável, sprint, story points, prazo, descrição, subtarefas, comentários e histórico.
 - **Backlog e sprints:** planejar, iniciar e concluir sprints, decidindo para onde vão as tarefas abertas.
-- **Documentos** em árvore, gerais do workspace ou por projeto, com editor Markdown.
+- **Documentos** em árvore, gerais do workspace ou por projeto, com editor Markdown e aviso quando
+  outra pessoa salvou no meio (ninguém sobrescreve o outro sem saber).
 - **Histórico** do workspace e atividade recente, em português.
 
 ## Stack
@@ -89,15 +92,16 @@ O seed recusa rodar no banco de produção (`project-flow`).
 
 ## Scripts
 
-| Comando             | O que faz                                         |
-| ------------------- | ------------------------------------------------- |
-| `npm run dev`       | servidor de desenvolvimento                       |
-| `npm test`          | testes (Vitest + MongoDB em memória)              |
-| `npm run typecheck` | gera os tipos das rotas e roda o TypeScript       |
-| `npm run lint`      | ESLint                                            |
-| `npm run format`    | Prettier                                          |
-| `npm run seed`      | dados de demonstração no banco de desenvolvimento |
-| `npm run build`     | build de produção                                 |
+| Comando                    | O que faz                                                         |
+| -------------------------- | ----------------------------------------------------------------- |
+| `npm run dev`              | servidor de desenvolvimento                                       |
+| `npm test`                 | testes (Vitest + MongoDB em memória)                              |
+| `npm run typecheck`        | gera os tipos das rotas e roda o TypeScript                       |
+| `npm run lint`             | ESLint                                                            |
+| `npm run format`           | Prettier                                                          |
+| `npm run seed`             | dados de demonstração no banco de desenvolvimento                 |
+| `npm run migrate:statuses` | migra status antigos (texto) para entidade; aceita `-- --dry-run` |
+| `npm run build`            | build de produção                                                 |
 
 Os commits seguem Conventional Commits (`feat(frontend): …`), conferidos pelo commitlint. O pre-commit
 roda ESLint e Prettier nos arquivos alterados. A CI do GitHub Actions roda tipos, lint, formatação,

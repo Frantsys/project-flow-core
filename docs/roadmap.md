@@ -567,3 +567,8 @@ A API do Claude não tem plano gratuito, mas o custo de um portfólio fica em ce
 - **M2 — concluído**, com dois ajustes ao plano:
   - limite de tentativas no próprio MongoDB em vez do Upstash ([ADR 008](adrs/008-limite-de-tentativas-no-mongodb.md));
   - migração para o Auth.js v5 (1.1) adiada, e o papel Convidado (1.7) fica para quando houver convites (3.6).
+- **M3 — concluído**, com dois itens movidos para os marcos em que são usados:
+  - status como entidade ([ADR 009](adrs/009-status-como-entidade.md)), convites por e-mail,
+    transferência de posse e proteção contra sobrescrita em documentos;
+  - ordem das tarefas na coluna (3.2) vai junto com o arrastar e soltar (M4);
+  - comentários em coleção própria (3.4) vão junto com menções e notificações (M5).
