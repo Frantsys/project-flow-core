@@ -560,3 +560,10 @@ A API do Claude não tem plano gratuito, mas o custo de um portfólio fica em ce
   - Speed Insights dentro das metas (7.1);
   - nota A em securityheaders.com (a partir do M2).
 - **Segurança (M2):** testar força bruta no login (deve bloquear na 6ª tentativa), um link de recuperação de senha usado duas vezes (deve falhar na segunda) e um GitHub com e-mail não verificado (não pode entrar na conta existente).
+
+## Andamento
+
+- **M1 — concluído** (falta ligar a Vercel ao GitHub e os testes E2E).
+- **M2 — concluído**, com dois ajustes ao plano:
+  - limite de tentativas no próprio MongoDB em vez do Upstash ([ADR 008](adrs/008-limite-de-tentativas-no-mongodb.md));
+  - migração para o Auth.js v5 (1.1) adiada, e o papel Convidado (1.7) fica para quando houver convites (3.6).

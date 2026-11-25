@@ -7,7 +7,11 @@ subtarefas e comentários, documentos em árvore e histórico de tudo o que mudo
 
 ## Funcionalidades
 
-- **Contas:** e-mail e senha, Google e GitHub (só e-mails verificados são vinculados a uma conta existente).
+- **Contas:** e-mail e senha, Google e GitHub (só e-mails verificados são vinculados a uma conta existente),
+  confirmação de e-mail, recuperação de senha por link de uso único e página "Minha conta" (nome, senha,
+  contas conectadas, exclusão da conta).
+- **Segurança:** limite de tentativas no login, cadastro e recuperação de senha; cabeçalhos HTTP de
+  segurança (CSP, HSTS, `frame-ancestors`); permissões por papel numa matriz única (`lib/permissions.ts`).
 - **Workspaces** com papéis Dono, Admin e Membro; adicionar, promover e remover pessoas.
 - **Projetos** com chave própria (PF, WEB…); o código das tarefas é sequencial por projeto (PF-12).
 - **Quadro kanban** por status, com criação rápida em cada coluna e "Mover para…".
@@ -26,6 +30,7 @@ subtarefas e comentários, documentos em árvore e histórico de tudo o que mudo
 | Autenticação | NextAuth (credenciais, Google, GitHub) com adapter MongoDB                     |
 | Dados        | MongoDB Atlas + Mongoose 9                                                     |
 | Validação    | zod (mesmos schemas no cliente e no servidor)                                  |
+| E-mail       | Resend (API HTTP), com fallback para o terminal em desenvolvimento             |
 | Testes       | Vitest + MongoDB em memória (replica set)                                      |
 | Hospedagem   | Vercel (funções em São Paulo, `gru1`), ao lado do cluster Atlas em `sa-east-1` |
 
