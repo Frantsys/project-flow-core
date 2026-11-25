@@ -6,6 +6,7 @@ import {
   ProjectDTO,
   ProjectSprintSummaryDTO,
   SprintStatus,
+  StatusDTO,
   TaskDTO,
   TaskPriority,
   TaskType,
@@ -15,13 +16,21 @@ interface WorkspaceIdLean {
   _id: Types.ObjectId;
 }
 
+type StatusLean = { _id: Types.ObjectId; name: string; category: StatusDTO["category"] };
+
+export const toStatusDTO = (s: StatusLean): StatusDTO => ({
+  id: s._id.toString(),
+  name: s.name,
+  category: s.category,
+});
+
 interface ProjectLean {
   _id: Types.ObjectId;
   workspaceId: Types.ObjectId;
   name: string;
   key: string;
   description?: string | null;
-  statuses: string[];
+  statuses: StatusLean[];
   taskSequence: number;
   createdAt: Date;
   updatedAt: Date;
@@ -63,7 +72,7 @@ export async function getProjectsByWorkspaceSlug(
     name: project.name,
     key: project.key,
     description: project.description ?? null,
-    statuses: project.statuses ?? [],
+    statuses: (project.statuses ?? []).map(toStatusDTO),
     taskSequence: project.taskSequence ?? 0,
     createdAt: new Date(project.createdAt).toISOString(),
     updatedAt: new Date(project.updatedAt).toISOString(),
@@ -75,7 +84,7 @@ interface ProjectBaseLean {
   name: string;
   key: string;
   description?: string | null;
-  statuses: string[];
+  statuses: StatusLean[];
 }
 
 interface PopulatedTaskLean {
@@ -83,7 +92,7 @@ interface PopulatedTaskLean {
   code: string;
   title: string;
   type: TaskType;
-  status: string;
+  statusId: Types.ObjectId;
   priority: TaskPriority;
   storyPoints?: number | null;
   dueDate?: Date | null;
@@ -142,7 +151,7 @@ export async function getProjectByKey(
   // 3. Carrega tasks (com sprint e assignee populados) e sprints em paralelo
   const [rawTasks, rawSprints] = await Promise.all([
     Task.find({ projectId: project._id })
-      .select("_id code title type status priority storyPoints dueDate sprintId assigneeId")
+      .select("_id code title type statusId priority storyPoints dueDate sprintId assigneeId")
       .populate("sprintId", "name")
       .populate("assigneeId", "username image")
       .sort({ createdAt: 1 })
@@ -159,7 +168,7 @@ export async function getProjectByKey(
     code: task.code,
     title: task.title,
     type: task.type,
-    status: task.status,
+    statusId: task.statusId.toString(),
     priority: task.priority,
     storyPoints: task.storyPoints ?? null,
     dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,
@@ -188,7 +197,7 @@ export async function getProjectByKey(
     name: project.name,
     key: project.key,
     description: project.description ?? null,
-    statuses: project.statuses ?? [],
+    statuses: (project.statuses ?? []).map(toStatusDTO),
     tasks,
     sprints,
   };

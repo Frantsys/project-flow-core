@@ -45,7 +45,8 @@ async function Backlog({ params }: { params: Promise<{ workspaceSlug: string; pr
 
   const canPlan = can(workspace.currentUserRole, "sprint.manage");
   const base = `/w/${workspace.slug}/projects/${project.key}`;
-  const doneStatus = project.statuses[project.statuses.length - 1];
+  const doneIds = new Set(project.statuses.filter((s) => s.category === "DONE").map((s) => s.id));
+  const statusName = new Map(project.statuses.map((s) => [s.id, s.name]));
   const sprints = [...project.sprints].sort((a, b) => ORDER[a.status] - ORDER[b.status]);
   const planned = sprints.filter((s) => s.status === "PLANNED").map((s) => ({ id: s.id, name: s.name }));
   const hasActive = sprints.some((s) => s.status === "ACTIVE");
@@ -62,12 +63,13 @@ async function Backlog({ params }: { params: Promise<{ workspaceSlug: string; pr
         key={sprint?.id ?? "backlog"}
         sprint={sprint}
         tasks={tasks}
+        statusName={statusName}
         base={base}
         actions={
           sprint && canPlan ? (
             <SprintActions
               sprint={sprint}
-              openTaskCodes={tasks.filter((t) => t.status !== doneStatus).map((t) => t.code)}
+              openTaskCodes={tasks.filter((t) => !doneIds.has(t.statusId)).map((t) => t.code)}
               plannedSprints={planned.filter((p) => p.id !== sprint.id)}
               hasActiveSprint={hasActive}
             />
@@ -85,7 +87,7 @@ async function Backlog({ params }: { params: Promise<{ workspaceSlug: string; pr
         view="backlog"
         actions={
           <div className="flex flex-wrap gap-2">
-            {workspace.currentUserRole !== "MEMBER" && (
+            {can(workspace.currentUserRole, "project.manage") && (
               <ProjectMenu
                 project={{
                   id: project.id,
@@ -94,6 +96,8 @@ async function Backlog({ params }: { params: Promise<{ workspaceSlug: string; pr
                   description: project.description,
                   taskCount: project.tasks.length,
                 }}
+                statuses={project.statuses}
+                taskStatusIds={project.tasks.map((t) => t.statusId)}
                 workspaceSlug={workspace.slug}
               />
             )}
@@ -142,11 +146,13 @@ async function Backlog({ params }: { params: Promise<{ workspaceSlug: string; pr
 function SprintSection({
   sprint,
   tasks,
+  statusName,
   base,
   actions,
 }: {
   sprint: ProjectSprintSummaryDTO | null;
   tasks: TaskDTO[];
+  statusName: Map<string, string>;
   base: string;
   actions: React.ReactNode;
 }) {
@@ -210,7 +216,7 @@ function SprintSection({
                       </Link>
                     </TableCell>
                     <TableCell className="w-36">
-                      <Badge variant="outline">{task.status}</Badge>
+                      <Badge variant="outline">{statusName.get(task.statusId)}</Badge>
                     </TableCell>
                     <TableCell className="w-28">
                       <Badge variant={priority.variant}>{priority.label}</Badge>

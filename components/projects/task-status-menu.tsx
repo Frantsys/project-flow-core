@@ -7,6 +7,7 @@ import { Check, Ellipsis } from "lucide-react";
 import { updateTaskStatusAction } from "@/server/actions/task.actions";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import type { StatusDTO } from "@/server/db/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,26 +20,26 @@ import {
 export function TaskStatusMenu({
   taskId,
   taskCode,
-  status,
+  statusId,
   statuses,
 }: {
   taskId: string;
   taskCode: string;
-  status: string;
-  statuses: string[];
+  statusId: string;
+  statuses: StatusDTO[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  function move(next: string) {
-    if (next === status) return;
+  function move(next: StatusDTO) {
+    if (next.id === statusId) return;
     startTransition(async () => {
-      const result = await updateTaskStatusAction({ taskId, status: next });
+      const result = await updateTaskStatusAction({ taskId, statusId: next.id });
       if (!result.success) {
         toast.error(result.error);
         return;
       }
-      toast.success(`${taskCode} movida para ${next}.`);
+      toast.success(`${taskCode} movida para ${next.name}.`);
       router.refresh();
     });
   }
@@ -53,9 +54,9 @@ export function TaskStatusMenu({
       <DropdownMenuContent align="end">
         <DropdownMenuLabel className="text-xs text-muted-foreground">Mover para</DropdownMenuLabel>
         {statuses.map((s) => (
-          <DropdownMenuItem key={s} disabled={s === status} onSelect={() => move(s)}>
-            <span className="flex-1">{s}</span>
-            {s === status && <Check aria-label="Status atual" />}
+          <DropdownMenuItem key={s.id} disabled={s.id === statusId} onSelect={() => move(s)}>
+            <span className="flex-1">{s.name}</span>
+            {s.id === statusId && <Check aria-label="Status atual" />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

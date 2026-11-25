@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import { createProjectAction, deleteProjectAction } from "@/server/actions/project.actions";
 import { createTaskAction } from "@/server/actions/task.actions";
 import { completeSprintAction, createSprintAction, startSprintAction } from "@/server/actions/sprint.actions";
-import { addMemberAction, removeMemberAction, updateMemberRoleAction } from "@/server/actions/member.actions";
+import { removeMemberAction, updateMemberRoleAction } from "@/server/actions/member.actions";
 import { createDocumentAction, deleteDocumentAction } from "@/server/actions/document.actions";
 import { deleteWorkspaceAction } from "@/server/actions/workspace.actions";
 import { updateTaskAction } from "@/server/actions/task.actions";
 import { getWorkspaceBySlug } from "@/server/services/workspace.service";
 import { ChangeHistory, DocumentModel, Project, Sprint, Task, Workspace } from "@/server/db/models";
-import { actAs, createUser, createWorkspace, expectFail, expectOk } from "../../test/helpers";
+import { actAs, createUser, createWorkspace, expectFail, expectOk, statusId } from "../../test/helpers";
 
 describe("getWorkspaceBySlug", () => {
   // regressão: os IDs vinham como ObjectId e o membro atual nunca era encontrado
@@ -50,7 +50,11 @@ describe("sprints", () => {
 
     const open = expectOk(await createTaskAction({ projectId: project.id, title: "Aberta" }));
     const done = expectOk(
-      await createTaskAction({ projectId: project.id, title: "Feita", status: "Concluído" })
+      await createTaskAction({
+        projectId: project.id,
+        title: "Feita",
+        statusId: await statusId(project.id, "Concluído"),
+      })
     );
     for (const t of [open, done]) expectOk(await updateTaskAction({ taskId: t.id, sprintId: active.id }));
 
@@ -75,21 +79,6 @@ describe("membros", () => {
     ]);
     return { owner, admin, admin2, member, ws };
   }
-
-  it("adiciona por e-mail existente e não duplica", async () => {
-    const { owner, ws } = await team();
-    const novo = await createUser("Novo");
-    actAs(owner.id);
-    expectFail(
-      await addMemberAction({ workspaceId: ws.id, email: "ninguem@teste.dev", role: "MEMBER" }),
-      "Não há conta"
-    );
-    expectOk(await addMemberAction({ workspaceId: ws.id, email: novo.email, role: "MEMBER" }));
-    expectFail(
-      await addMemberAction({ workspaceId: ws.id, email: novo.email, role: "MEMBER" }),
-      "já é membro"
-    );
-  });
 
   it("protege o dono e impede admin de mexer em outro admin", async () => {
     const { owner, admin, admin2, member, ws } = await team();

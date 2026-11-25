@@ -12,7 +12,7 @@ import { completeSprintSchema, createSprintSchema, sprintIdSchema } from "../sch
 interface ProjectLean {
   _id: Types.ObjectId;
   workspaceId: Types.ObjectId;
-  statuses: string[];
+  statuses: { _id: Types.ObjectId; category: string }[];
 }
 
 interface SprintLean {
@@ -109,7 +109,7 @@ export const startSprintAction = createAction({
 });
 
 /**
- * Conclui a sprint ativa. Tarefas que não estão no último status do projeto (ex.: "Concluído")
+ * Conclui a sprint ativa. Tarefas fora dos status da categoria "Concluído"
  * vão para outra sprint planejada ou de volta ao backlog, na mesma transação que fecha a sprint.
  */
 export const completeSprintAction = createAction({
@@ -128,13 +128,13 @@ export const completeSprintAction = createAction({
       if (!target) fail("Escolha uma sprint planejada deste projeto.");
     }
 
-    const doneStatus = project.statuses.at(-1);
+    const doneIds = project.statuses.filter((s) => s.category === "DONE").map((s) => s._id);
     let moved = 0;
     const session = await mongoose.startSession();
     try {
       await session.withTransaction(async () => {
         const result = await Task.updateMany(
-          { sprintId: sprint._id, status: { $ne: doneStatus } },
+          { sprintId: sprint._id, statusId: { $nin: doneIds } },
           { $set: { sprintId: moveToSprintId ?? null } },
           { session }
         );

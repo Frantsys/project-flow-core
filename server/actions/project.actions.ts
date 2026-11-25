@@ -7,7 +7,12 @@ import { ChangeHistory, DocumentModel, Project, Sprint, Task } from "../db/model
 import { createAction, fail } from "../lib/action";
 import { requirePermission } from "../lib/access";
 import { recordHistory } from "../services/history.service";
-import { createProjectSchema, deleteProjectSchema, updateProjectSchema } from "../schemas";
+import {
+  createProjectSchema,
+  deleteProjectSchema,
+  updateProjectSchema,
+  updateProjectStatusesSchema,
+} from "../schemas";
 
 interface ProjectLean {
   _id: Types.ObjectId;
@@ -164,5 +169,65 @@ export const deleteProjectAction = createAction({
 
     revalidatePath("/", "layout");
     return { id: projectId };
+  },
+});
+
+/**
+ * Substitui as colunas do quadro (nome, categoria e ordem). Status removidos levam as tarefas
+ * para o primeiro status restante da mesma categoria (ou o primeiro da lista), na mesma transação.
+ */
+export const updateProjectStatusesAction = createAction({
+  name: "project.updateStatuses",
+  schema: updateProjectStatusesSchema,
+  handler: async ({ projectId, statuses }, { userId }) => {
+    const { project, role } = await loadProjectForManager(projectId, userId);
+    const current = (await Project.findById(projectId).select("statuses").lean())?.statuses ?? [];
+    const currentIds = new Set(current.map((s) => s._id.toString()));
+    if (statuses.some((s) => s.id && !currentIds.has(s.id))) fail("Um dos status não pertence ao projeto.");
+
+    const next = statuses.map((s) => ({
+      _id: s.id ? new Types.ObjectId(s.id) : new Types.ObjectId(),
+      name: s.name,
+      category: s.category,
+    }));
+    const kept = new Set(next.map((s) => s._id.toString()));
+    const removed = current.filter((s) => !kept.has(s._id.toString()));
+
+    let moved = 0;
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        moved = 0;
+        for (const gone of removed) {
+          const target = next.find((s) => s.category === gone.category) ?? next[0]!;
+          const result = await Task.updateMany(
+            { projectId: project._id, statusId: gone._id },
+            { $set: { statusId: target._id } },
+            { session }
+          );
+          moved += result.modifiedCount;
+        }
+        await Project.updateOne({ _id: project._id }, { $set: { statuses: next } }, { session });
+      });
+    } finally {
+      await session.endSession();
+    }
+
+    await recordHistory({
+      workspaceId: project.workspaceId,
+      projectId: project._id,
+      userId,
+      actorRole: role,
+      action: "MODIFY",
+      targetType: "PROJECT",
+      targetId: project._id,
+      details: { targetTitle: `${project.key} · ${project.name}`, field: "statuses" },
+    });
+
+    revalidatePath("/w/[workspaceSlug]/projects/[projectKey]", "layout");
+    return {
+      statuses: next.map((s) => ({ id: s._id.toString(), name: s.name, category: s.category })),
+      moved,
+    };
   },
 });

@@ -59,7 +59,7 @@ export function describeHistory(entry: HistoryEntryDTO): string {
     case "PROJECT":
       if (action === "CREATE") return "criou o projeto";
       if (action === "DELETE") return "excluiu o projeto";
-      return "editou o projeto";
+      return details.field === "statuses" ? "editou as colunas do quadro de" : "editou o projeto";
   }
 }
 

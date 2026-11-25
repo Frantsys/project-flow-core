@@ -154,7 +154,7 @@ async function main() {
   let taskCount = 0;
   for (const [pi, p] of projects.entries()) {
     const project = await Project.create({ workspaceId: ws._id, ...p, taskSequence: 0 });
-    const statuses = project.statuses;
+    const statuses = project.statuses.map((st) => st._id);
 
     const sprints = await Sprint.insertMany([
       {
@@ -188,7 +188,7 @@ async function main() {
     const tasks = seeds.map(([title, type, priority, storyPoints], i) => {
       // distribuição: concluídas na sprint 1, espalhadas na ativa, planejadas e backlog
       const sprint = i < 4 ? done : i < 10 ? active : i < 13 ? planned : null;
-      const status =
+      const statusId =
         sprint === done
           ? statuses.at(-1)!
           : sprint === active
@@ -206,7 +206,7 @@ async function main() {
         type,
         priority,
         storyPoints,
-        status,
+        statusId,
         dueDate: due,
         description:
           i % 3 === 0

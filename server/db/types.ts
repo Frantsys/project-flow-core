@@ -1,4 +1,12 @@
-import { WorkspaceRole } from "./models";
+import type { StatusCategory, WorkspaceRole } from "./models";
+
+export type { StatusCategory };
+
+export interface StatusDTO {
+  id: string;
+  name: string;
+  category: StatusCategory;
+}
 
 export interface WorkspaceSummaryDTO {
   id: string;
@@ -51,7 +59,7 @@ export interface ProjectDTO {
   name: string;
   key: string;
   description: string | null;
-  statuses: string[];
+  statuses: StatusDTO[];
   taskSequence: number;
   createdAt: string;
   updatedAt: string;
@@ -66,7 +74,7 @@ export interface TaskDTO {
   code: string;
   title: string;
   type: TaskType;
-  status: string; // será usado no frontend para distribuir as colunas de tarefas, estilo kanban
+  statusId: string; // coluna do quadro: id de um item de project.statuses
   priority: TaskPriority;
   storyPoints: number | null;
   dueDate: string | null;
@@ -95,7 +103,7 @@ export interface ProjectDetailsDTO {
   name: string;
   key: string;
   description: string | null;
-  statuses: string[];
+  statuses: StatusDTO[];
   workspaceId: string;
   tasks: TaskDTO[];
   sprints: ProjectSprintSummaryDTO[];

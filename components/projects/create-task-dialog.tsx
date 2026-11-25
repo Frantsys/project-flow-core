@@ -20,22 +20,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import type { TaskPriority } from "@/server/db/types";
+import type { StatusDTO, TaskPriority } from "@/server/db/types";
 
 const TYPES = ["TASK", "BUG", "STORY"] as const;
 const PRIORITIES: TaskPriority[] = ["LOW", "MEDIUM", "HIGH", "URGENT"];
 
-type Errors = Partial<Record<"title" | "status" | "storyPoints" | "dueDate", string>>;
+type Errors = Partial<Record<"title" | "statusId" | "storyPoints" | "dueDate", string>>;
 
 export function CreateTaskDialog({
   projectId,
   statuses,
-  defaultStatus,
+  defaultStatusId,
   trigger,
 }: {
   projectId: string;
-  statuses: string[];
-  defaultStatus?: string;
+  statuses: StatusDTO[];
+  defaultStatusId?: string;
   trigger: React.ReactNode;
 }) {
   const router = useRouter();
@@ -56,7 +56,7 @@ export function CreateTaskDialog({
       title: String(data.get("title") ?? ""),
       type: data.get("type") as (typeof TYPES)[number],
       priority: data.get("priority") as TaskPriority,
-      status: String(data.get("status") ?? ""),
+      statusId: String(data.get("statusId") ?? "") || undefined,
       storyPoints: points === "" ? null : Number(points),
       dueDate: due === "" ? null : due,
     });
@@ -66,7 +66,7 @@ export function CreateTaskDialog({
       const fe = result.fieldErrors ?? {};
       setErrors({
         title: fe.title?.[0],
-        status: fe.status?.[0],
+        statusId: fe.statusId?.[0],
         storyPoints: fe.storyPoints?.[0],
         dueDate: fe.dueDate?.[0],
       });
@@ -143,21 +143,26 @@ export function CreateTaskDialog({
                   </SelectContent>
                 </Select>
               </Field>
-              <Field data-invalid={!!errors.status}>
+              <Field data-invalid={!!errors.statusId}>
                 <FieldLabel htmlFor="task-status">Status</FieldLabel>
-                <Select name="status" defaultValue={defaultStatus ?? statuses[0]}>
-                  <SelectTrigger id="task-status" className="w-full" aria-invalid={!!errors.status}>
+                <Select
+                  name="statusId"
+                  defaultValue={
+                    defaultStatusId ?? (statuses.find((s) => s.category === "TODO") ?? statuses[0])?.id
+                  }
+                >
+                  <SelectTrigger id="task-status" className="w-full" aria-invalid={!!errors.statusId}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {statuses.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <FieldError>{errors.status}</FieldError>
+                <FieldError>{errors.statusId}</FieldError>
               </Field>
             </div>
 

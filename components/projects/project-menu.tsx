@@ -3,7 +3,9 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Ellipsis, Pencil, Trash2 } from "lucide-react";
+import { Columns3, Ellipsis, Pencil, Trash2 } from "lucide-react";
+import type { StatusDTO } from "@/server/db/types";
+import { StatusEditorDialog } from "./status-editor-dialog";
 import { deleteProjectAction, updateProjectAction } from "@/server/actions/project.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,13 +40,19 @@ import {
 
 interface ProjectMenuProps {
   project: { id: string; name: string; key: string; description: string | null; taskCount: number };
+  statuses: StatusDTO[];
+  /** statusId de cada tarefa, para mostrar quantas há em cada coluna. */
+  taskStatusIds: string[];
   workspaceSlug: string;
 }
 
 /** Editar ou excluir o projeto. Só aparece para dono e admin. */
-export function ProjectMenu({ project, workspaceSlug }: ProjectMenuProps) {
+export function ProjectMenu({ project, statuses, taskStatusIds, workspaceSlug }: ProjectMenuProps) {
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
+  const [statusesOpen, setStatusesOpen] = useState(false);
+  const taskCounts: Record<string, number> = {};
+  for (const id of taskStatusIds) taskCounts[id] = (taskCounts[id] ?? 0) + 1;
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; description?: string; form?: string }>({});
   const [typed, setTyped] = useState("");
@@ -103,12 +111,24 @@ export function ProjectMenu({ project, workspaceSlug }: ProjectMenuProps) {
             <Pencil aria-hidden="true" />
             Editar projeto
           </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setStatusesOpen(true)}>
+            <Columns3 aria-hidden="true" />
+            Colunas do quadro
+          </DropdownMenuItem>
           <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
             <Trash2 aria-hidden="true" />
             Excluir projeto
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <StatusEditorDialog
+        projectId={project.id}
+        statuses={statuses}
+        taskCounts={taskCounts}
+        open={statusesOpen}
+        onOpenChange={setStatusesOpen}
+      />
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-[480px]">

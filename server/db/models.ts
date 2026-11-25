@@ -75,12 +75,34 @@ WorkspaceSchema.index({ "members.userId": 1 });
 export const Workspace: Model<IWorkspace> =
   mongoose.models.Workspace || mongoose.model<IWorkspace>("Workspace", WorkspaceSchema);
 
+/** Categoria define o comportamento: DONE conta como concluída (sprints, relatórios). */
+export type StatusCategory = "TODO" | "IN_PROGRESS" | "DONE";
+
+export interface IProjectStatus {
+  _id: Types.ObjectId;
+  name: string;
+  category: StatusCategory;
+}
+
+export const DEFAULT_STATUSES: { name: string; category: StatusCategory }[] = [
+  { name: "A Fazer", category: "TODO" },
+  { name: "Em Andamento", category: "IN_PROGRESS" },
+  { name: "Revisão", category: "IN_PROGRESS" },
+  { name: "Concluído", category: "DONE" },
+];
+
+const ProjectStatusSchema = new Schema<IProjectStatus>({
+  name: { type: String, required: true, trim: true, maxlength: 40 },
+  category: { type: String, enum: ["TODO", "IN_PROGRESS", "DONE"], required: true },
+});
+
 export interface IProject extends Document {
   workspaceId: Types.ObjectId;
   key: string;
   name: string;
   description?: string;
-  statuses: string[];
+  /** Na ordem das colunas do quadro. */
+  statuses: Types.DocumentArray<IProjectStatus>;
   taskSequence: number;
   createdAt: Date;
   updatedAt: Date;
@@ -92,10 +114,7 @@ const ProjectSchema = new Schema<IProject>(
     key: { type: String, required: true, uppercase: true, trim: true, maxlength: 10 },
     name: { type: String, required: true, trim: true },
     description: { type: String, default: "" },
-    statuses: {
-      type: [String],
-      default: ["A Fazer", "Em Andamento", "Revisão", "Concluído"],
-    },
+    statuses: { type: [ProjectStatusSchema], default: () => DEFAULT_STATUSES },
     // Contador incremental para gerar códigos únicos como WEB2-1, WEB2-2...
     taskSequence: { type: Number, default: 0 },
   },
@@ -172,7 +191,8 @@ export interface ITask extends Document {
   title: string;
   description?: string;
   type: TaskType;
-  status: string;
+  /** _id de um item de Project.statuses: renomear o status não mexe nas tarefas. */
+  statusId: Types.ObjectId;
   priority: TaskPriority;
   storyPoints?: number | null;
   tags: string[];
@@ -211,7 +231,7 @@ const TaskSchema = new Schema<ITask>(
       enum: ["TASK", "BUG", "STORY"],
       default: "TASK",
     },
-    status: { type: String, required: true, default: "A Fazer" },
+    statusId: { type: Schema.Types.ObjectId, required: true },
     priority: {
       type: String,
       enum: ["LOW", "MEDIUM", "HIGH", "URGENT"],
@@ -228,7 +248,7 @@ const TaskSchema = new Schema<ITask>(
 );
 
 TaskSchema.index({ projectId: 1, code: 1 }, { unique: true });
-TaskSchema.index({ projectId: 1, status: 1 });
+TaskSchema.index({ projectId: 1, statusId: 1 });
 
 export const Task: Model<ITask> = mongoose.models.Task || mongoose.model<ITask>("Task", TaskSchema);
 
@@ -365,3 +385,33 @@ AuthTokenSchema.index({ userId: 1, purpose: 1 });
 
 export const AuthToken: Model<IAuthToken> =
   mongoose.models.AuthToken || mongoose.model<IAuthToken>("AuthToken", AuthTokenSchema);
+
+/** Convite pendente para um workspace. Um por e-mail por workspace; reenviar troca o token. */
+export interface IInvitation {
+  _id: Types.ObjectId;
+  workspaceId: Types.ObjectId;
+  email: string;
+  role: "ADMIN" | "MEMBER";
+  tokenHash: string;
+  invitedBy: Types.ObjectId;
+  expiresAt: Date;
+  createdAt: Date;
+}
+
+const InvitationSchema = new Schema<IInvitation>(
+  {
+    workspaceId: { type: Schema.Types.ObjectId, ref: "Workspace", required: true },
+    email: { type: String, required: true, lowercase: true, trim: true },
+    role: { type: String, enum: ["ADMIN", "MEMBER"], required: true },
+    tokenHash: { type: String, required: true, unique: true },
+    invitedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    expiresAt: { type: Date, required: true },
+  },
+  { timestamps: { createdAt: true, updatedAt: false }, versionKey: false }
+);
+
+InvitationSchema.index({ workspaceId: 1, email: 1 }, { unique: true });
+InvitationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+export const Invitation: Model<IInvitation> =
+  mongoose.models.Invitation || mongoose.model<IInvitation>("Invitation", InvitationSchema);

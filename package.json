@@ -13,7 +13,8 @@
     "prepare": "husky",
     "test": "vitest run",
     "test:watch": "vitest",
-    "seed": "tsx --env-file=.env.local scripts/seed.ts"
+    "seed": "tsx --env-file=.env.local scripts/seed.ts",
+    "migrate:statuses": "tsx --env-file=.env.local scripts/migrate-statuses.ts"
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.11.3",

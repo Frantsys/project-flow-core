@@ -45,6 +45,7 @@ import { TaskTypeIndicator } from "@/components/projects/task-type";
 import type {
   ProjectSprintSummaryDTO,
   TaskDetailDTO,
+  StatusDTO,
   TaskPriority,
   WorkspaceMemberDTO,
 } from "@/server/db/types";
@@ -58,7 +59,7 @@ type ActionResultLike = { success: true } | { success: false; error: string };
 
 export interface TaskDetailProps {
   task: TaskDetailDTO;
-  statuses: string[];
+  statuses: StatusDTO[];
   sprints: ProjectSprintSummaryDTO[];
   members: WorkspaceMemberDTO[];
   currentUser: { id: string; role: WorkspaceRole };
@@ -165,14 +166,14 @@ export function TaskDetail({
             Status
           </dt>
           <dd>
-            <Select value={task.status} onValueChange={(status) => update({ status })}>
+            <Select value={task.statusId} onValueChange={(statusId) => update({ statusId })}>
               <SelectTrigger aria-labelledby="lbl-status" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {statuses.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
                   </SelectItem>
                 ))}
               </SelectContent>

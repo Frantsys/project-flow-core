@@ -150,8 +150,8 @@ export const createTaskSchema = z.object({
     .max(200, "O título deve ter no máximo 200 caracteres."),
   type: taskTypeSchema.default("TASK"),
   priority: taskPrioritySchema.default("MEDIUM"),
-  // vazio = primeiro status do projeto
-  status: z.string().trim().max(50).optional(),
+  // vazio = primeiro status "A fazer" do projeto
+  statusId: z.string().regex(objectIdRegex, "Status inválido.").optional(),
   storyPoints: z
     .number("Informe um número.")
     .int("Use um número inteiro.")
@@ -171,7 +171,7 @@ export type CreateTaskInput = z.input<typeof createTaskSchema>;
 
 export const updateTaskStatusSchema = z.object({
   taskId: z.string().regex(objectIdRegex, "ID de tarefa inválido."),
-  status: z.string().trim().min(1, "Informe o status.").max(50),
+  statusId: z.string().regex(objectIdRegex, "Informe o status."),
 });
 
 export type UpdateTaskStatusInput = z.infer<typeof updateTaskStatusSchema>;
@@ -189,7 +189,7 @@ export const updateTaskSchema = z.object({
   description: z.string().max(20000, "A descrição deve ter no máximo 20.000 caracteres.").optional(),
   type: taskTypeSchema.optional(),
   priority: taskPrioritySchema.optional(),
-  status: z.string().trim().min(1).max(50).optional(),
+  statusId: z.string().regex(objectIdRegex, "Status inválido.").optional(),
   storyPoints: z
     .number("Informe um número.")
     .int("Use um número inteiro.")
@@ -266,7 +266,7 @@ export const completeSprintSchema = sprintIdSchema.extend({
   moveToSprintId: z.string().regex(objectIdRegex, "ID de sprint inválido.").nullable(),
 });
 
-export const addMemberSchema = z.object({
+export const inviteMemberSchema = z.object({
   workspaceId: z.string().regex(objectIdRegex, "ID de workspace inválido."),
   email: z.email("Informe um e-mail válido.").trim().toLowerCase(),
   role: z.enum(["ADMIN", "MEMBER"]),
@@ -296,8 +296,53 @@ export const updateDocumentSchema = z.object({
     .min(1, "Dê um título ao documento.")
     .max(150, "O título deve ter no máximo 150 caracteres."),
   content: z.string().max(200000, "O documento passou do tamanho máximo."),
+  // updatedAt da versão que a pessoa abriu: se mudou desde então, alguém salvou no meio
+  baseUpdatedAt: z.iso.datetime(),
 });
 
 export const documentIdSchema = z.object({
   documentId: z.string().regex(objectIdRegex, "ID de documento inválido."),
 });
+
+export const statusCategorySchema = z.enum(["TODO", "IN_PROGRESS", "DONE"]);
+
+export const updateProjectStatusesSchema = z
+  .object({
+    projectId: z.string().regex(objectIdRegex, "ID de projeto inválido."),
+    statuses: z
+      .array(
+        z.object({
+          // sem id = status novo
+          id: z.string().regex(objectIdRegex).optional(),
+          name: z.string().trim().min(1, "Dê um nome ao status.").max(40, "Use no máximo 40 caracteres."),
+          category: statusCategorySchema,
+        })
+      )
+      .min(2, "O quadro precisa de pelo menos 2 status.")
+      .max(12, "Use no máximo 12 status."),
+  })
+  .superRefine(({ statuses }, ctx) => {
+    const names = statuses.map((s) => s.name.toLocaleLowerCase("pt-BR"));
+    if (new Set(names).size !== names.length) {
+      ctx.addIssue({ code: "custom", path: ["statuses"], message: "Há dois status com o mesmo nome." });
+    }
+    if (!statuses.some((s) => s.category === "DONE")) {
+      ctx.addIssue({ code: "custom", path: ["statuses"], message: "Inclua um status de concluído." });
+    }
+    if (statuses.every((s) => s.category === "DONE")) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["statuses"],
+        message: "Inclua um status que não seja de concluído.",
+      });
+    }
+  });
+
+export type UpdateProjectStatusesInput = z.input<typeof updateProjectStatusesSchema>;
+
+export const invitationRefSchema = z.object({
+  workspaceId: z.string().regex(objectIdRegex, "ID de workspace inválido."),
+  invitationId: z.string().regex(objectIdRegex, "ID de convite inválido."),
+});
+
+export const acceptInvitationSchema = z.object({ token: z.string().min(1, "Convite inválido.") });

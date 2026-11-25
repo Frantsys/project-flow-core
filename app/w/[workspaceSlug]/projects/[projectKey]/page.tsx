@@ -17,7 +17,8 @@ import { TaskTypeIndicator } from "@/components/projects/task-type";
 import { CreateTaskDialog } from "@/components/projects/create-task-dialog";
 import { TaskStatusMenu } from "@/components/projects/task-status-menu";
 import { ProjectMenu } from "@/components/projects/project-menu";
-import type { TaskDTO } from "@/server/db/types";
+import type { StatusDTO, TaskDTO } from "@/server/db/types";
+import { can } from "@/lib/permissions";
 
 export default function BoardPage({ params }: PageProps<"/w/[workspaceSlug]/projects/[projectKey]">) {
   return (
@@ -47,7 +48,7 @@ async function Board({ params }: { params: Promise<{ workspaceSlug: string; proj
         view="board"
         actions={
           <div className="flex flex-wrap gap-2">
-            {workspace.currentUserRole !== "MEMBER" && (
+            {can(workspace.currentUserRole, "project.manage") && (
               <ProjectMenu
                 project={{
                   id: project.id,
@@ -56,6 +57,8 @@ async function Board({ params }: { params: Promise<{ workspaceSlug: string; proj
                   description: project.description,
                   taskCount: project.tasks.length,
                 }}
+                statuses={project.statuses}
+                taskStatusIds={project.tasks.map((t) => t.statusId)}
                 workspaceSlug={workspace.slug}
               />
             )}
@@ -77,24 +80,24 @@ async function Board({ params }: { params: Promise<{ workspaceSlug: string; proj
       <div className="-mx-6 overflow-x-auto px-6 pb-2 md:-mx-8 md:px-8">
         <div className="flex min-w-min items-start gap-3.5">
           {project.statuses.map((status) => {
-            const tasks = project.tasks.filter((t) => t.status === status);
+            const tasks = project.tasks.filter((t) => t.statusId === status.id);
             return (
               <section
-                key={status}
-                aria-labelledby={`col-${status}`}
+                key={status.id}
+                aria-labelledby={`col-${status.id}`}
                 className="flex w-[260px] shrink-0 flex-col gap-2.5 rounded-xl bg-muted p-2.5"
               >
                 <div className="flex items-center justify-between px-1">
-                  <h2 id={`col-${status}`} className="flex items-center gap-2 text-sm font-semibold">
-                    {status}
+                  <h2 id={`col-${status.id}`} className="flex items-center gap-2 text-sm font-semibold">
+                    {status.name}
                     <span className="font-medium text-muted-foreground">{tasks.length}</span>
                   </h2>
                   <CreateTaskDialog
                     projectId={project.id}
                     statuses={project.statuses}
-                    defaultStatus={status}
+                    defaultStatusId={status.id}
                     trigger={
-                      <Button variant="ghost" size="icon-sm" aria-label={`Nova tarefa em ${status}`}>
+                      <Button variant="ghost" size="icon-sm" aria-label={`Nova tarefa em ${status.name}`}>
                         <Plus aria-hidden="true" />
                       </Button>
                     }
@@ -131,7 +134,7 @@ function TaskCard({
   now,
 }: {
   task: TaskDTO;
-  statuses: string[];
+  statuses: StatusDTO[];
   href: string;
   now: Date;
 }) {
@@ -151,7 +154,12 @@ function TaskCard({
           {priority.label}
         </Badge>
         <div className="relative z-10">
-          <TaskStatusMenu taskId={task.id} taskCode={task.code} status={task.status} statuses={statuses} />
+          <TaskStatusMenu
+            taskId={task.id}
+            taskCode={task.code}
+            statusId={task.statusId}
+            statuses={statuses}
+          />
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-2.5">

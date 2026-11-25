@@ -1,7 +1,7 @@
 import { expect } from "vitest";
 import { Types } from "mongoose";
 import dbConnect from "@/lib/db";
-import { User, Workspace, type WorkspaceRole } from "@/server/db/models";
+import { Project, User, Workspace, type WorkspaceRole } from "@/server/db/models";
 import type { ActionResult } from "@/types";
 
 export { actAs } from "./session-state";
@@ -32,6 +32,14 @@ export async function createWorkspace(
     ],
   });
   return { id: ws._id.toString(), slug: ws.slug };
+}
+
+/** Id do status do projeto com esse nome (os padrões: "A Fazer", "Em Andamento", "Revisão", "Concluído"). */
+export async function statusId(projectId: string, name: string) {
+  const project = await Project.findById(projectId).lean();
+  const status = project?.statuses.find((s) => s.name === name);
+  if (!status) throw new Error(`Status "${name}" não existe no projeto.`);
+  return status._id.toString();
 }
 
 /** Falha o teste se a action não deu certo, e devolve os dados. */

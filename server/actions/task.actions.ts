@@ -23,8 +23,12 @@ interface ProjectForTaskLean {
   _id: Types.ObjectId;
   workspaceId: Types.ObjectId;
   key: string;
-  statuses: string[];
+  statuses: { _id: Types.ObjectId; name: string; category: string }[];
 }
+
+/** Procura o status no projeto pelo id (string). */
+const findStatus = (project: ProjectForTaskLean, id: string | null | undefined) =>
+  id ? project.statuses.find((s) => s._id.toString() === id) : undefined;
 
 interface TaskLean {
   _id: Types.ObjectId;
@@ -34,7 +38,7 @@ interface TaskLean {
   title: string;
   description?: string;
   type: string;
-  status: string;
+  statusId: Types.ObjectId;
   priority: string;
   storyPoints?: number | null;
   dueDate?: Date | null;
@@ -103,7 +107,7 @@ async function loadTask(taskId: string, userId: string) {
 export const createTaskAction = createAction({
   name: "task.create",
   schema: createTaskSchema,
-  handler: async ({ projectId, title, type, priority, storyPoints, dueDate, status: wanted }, { userId }) => {
+  handler: async ({ projectId, title, type, priority, storyPoints, dueDate, statusId }, { userId }) => {
     await dbConnect();
 
     const project = await Project.findById(projectId)
@@ -113,9 +117,12 @@ export const createTaskAction = createAction({
 
     const role = await requirePermission(project.workspaceId.toString(), userId, "task.edit");
 
-    const status = wanted || project.statuses[0];
-    if (!status || !project.statuses.includes(status)) {
-      fail("Status inválido para este projeto.", { status: ["Escolha um dos status do projeto."] });
+    // sem escolha: o primeiro status "A fazer" (ou o primeiro da lista)
+    const status = statusId
+      ? findStatus(project, statusId)
+      : (project.statuses.find((s) => s.category === "TODO") ?? project.statuses[0]);
+    if (!status) {
+      fail("Status inválido para este projeto.", { statusId: ["Escolha um dos status do projeto."] });
     }
 
     // $inc é atômico: duas criações simultâneas nunca recebem o mesmo número
@@ -136,7 +143,7 @@ export const createTaskAction = createAction({
       title,
       type,
       priority,
-      status,
+      statusId: status._id,
       storyPoints: storyPoints ?? null,
       dueDate: dueDate ? toDate(dueDate) : null,
     });
@@ -195,9 +202,15 @@ export const updateTaskAction = createAction({
     if (data.priority !== undefined) track("priority", "priority", task.priority, data.priority);
     if (data.storyPoints !== undefined)
       track("storyPoints", "storyPoints", task.storyPoints ?? null, data.storyPoints);
-    if (data.status !== undefined) {
-      if (!project.statuses.includes(data.status)) fail("Status inválido para este projeto.");
-      track("status", "status", task.status, data.status);
+    if (data.statusId !== undefined) {
+      const next = findStatus(project, data.statusId);
+      if (!next) fail("Status inválido para este projeto.");
+      // o histórico guarda os nomes do momento, para continuar legível se o status for renomeado
+      const current = findStatus(project, task.statusId.toString());
+      track("status", "statusId", task.statusId.toString(), data.statusId, [
+        current?.name ?? null,
+        next.name,
+      ]);
     }
     if (data.dueDate !== undefined) {
       const oldDue = dateOnly(task.dueDate);
@@ -257,10 +270,10 @@ export const updateTaskAction = createAction({
 export const updateTaskStatusAction = createAction({
   name: "task.updateStatus",
   schema: updateTaskStatusSchema,
-  handler: async ({ taskId, status }) => {
-    const result = await updateTaskAction({ taskId, status });
+  handler: async ({ taskId, statusId }) => {
+    const result = await updateTaskAction({ taskId, statusId });
     if (!result.success) fail(result.error, result.fieldErrors);
-    return { id: taskId, status };
+    return { id: taskId, statusId };
   },
 });
 

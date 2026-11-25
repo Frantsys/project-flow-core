@@ -10,7 +10,7 @@ import {
   updateTaskAction,
 } from "@/server/actions/task.actions";
 import { ChangeHistory, Task } from "@/server/db/models";
-import { actAs, createUser, createWorkspace, expectFail, expectOk } from "../../test/helpers";
+import { actAs, createUser, createWorkspace, expectFail, expectOk, statusId } from "../../test/helpers";
 
 async function setup() {
   const owner = await createUser("Dono");
@@ -43,12 +43,17 @@ describe("createTaskAction", () => {
     expect(codes).toEqual(["PF-1", "PF-2", "PF-3", "PF-4", "PF-5", "PF-6", "PF-7", "PF-8"]);
   });
 
-  it("usa o primeiro status do projeto e recusa status que não existe", async () => {
-    const { project } = await setup();
+  it("usa o primeiro status A fazer do projeto e recusa status de outro projeto", async () => {
+    const { project, ws } = await setup();
     const { id } = expectOk(await createTaskAction({ projectId: project.id, title: "Padrão" }));
-    expect((await Task.findById(id).lean())?.status).toBe("A Fazer");
+    expect((await Task.findById(id).lean())?.statusId.toString()).toBe(await statusId(project.id, "A Fazer"));
+    const other = expectOk(await createProjectAction({ workspaceId: ws.id, name: "Outro", key: "OUT" }));
     expectFail(
-      await createTaskAction({ projectId: project.id, title: "Ruim", status: "Inexistente" }),
+      await createTaskAction({
+        projectId: project.id,
+        title: "Ruim",
+        statusId: await statusId(other.id, "A Fazer"),
+      }),
       "Status inválido"
     );
   });
@@ -67,10 +72,20 @@ describe("updateTaskAction", () => {
     await ChangeHistory.deleteMany({});
 
     expectOk(
-      await updateTaskAction({ taskId: id, title: "Original", priority: "URGENT", status: "Revisão" })
+      await updateTaskAction({
+        taskId: id,
+        title: "Original",
+        priority: "URGENT",
+        statusId: await statusId(project.id, "Revisão"),
+      })
     );
-    const fields = (await ChangeHistory.find({ targetId: id }).lean()).map((h) => h.details.field).sort();
-    expect(fields).toEqual(["priority", "status"]);
+    const entries = await ChangeHistory.find({ targetId: id }).lean();
+    expect(entries.map((h) => h.details.field).sort()).toEqual(["priority", "status"]);
+    // o histórico guarda nomes, não ids
+    expect(entries.find((h) => h.details.field === "status")?.details).toMatchObject({
+      oldValue: "A Fazer",
+      newValue: "Revisão",
+    });
   });
 
   it("só aceita responsável que é membro do workspace", async () => {
