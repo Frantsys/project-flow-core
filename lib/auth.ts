@@ -13,7 +13,9 @@ import { MongoClient } from "mongodb";
  *  é necessário e ideal para o adapter do next-auth com MongoDB
  */
 const clientPromise = dbConnect().then(
-  (mongooseInstance) => mongooseInstance.connection.getClient() as MongoClient
+  // shortcut: o mongoose 9 traz o driver mongodb 7 e o adapter declara ^6; as APIs usadas pelo adapter
+  // são compatíveis, por isso o cast. Remover quando o @auth/mongodb-adapter aceitar mongodb 7.
+  (mongooseInstance) => mongooseInstance.connection.getClient() as unknown as MongoClient
 );
 
 
@@ -55,7 +57,7 @@ export const authOptions: NextAuthOptions = {
     pages: {
         signOut: "/auth/login",
         error: "/auth/login",
-        newUser: "/onboarding"
+        newUser: "/workspaces"
     },
     session: {
         strategy: "jwt",
