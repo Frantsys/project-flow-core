@@ -1,4 +1,6 @@
 import { can } from "@/lib/permissions";
+import { filterTasks, parseTaskFilters } from "@/lib/task-filters";
+import { TaskFilterBar } from "@/components/projects/task-filter-bar";
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -23,18 +25,29 @@ import type { ProjectSprintSummaryDTO, TaskDTO } from "@/server/db/types";
 
 export default function BacklogPage({
   params,
+  searchParams,
 }: PageProps<"/w/[workspaceSlug]/projects/[projectKey]/backlog">) {
   return (
     <Suspense fallback={<BacklogSkeleton />}>
-      <Backlog params={params} />
+      <Backlog params={params} searchParams={searchParams} />
     </Suspense>
   );
 }
 
 const ORDER = { ACTIVE: 0, PLANNED: 1, COMPLETED: 2 } as const;
 
-async function Backlog({ params }: { params: Promise<{ workspaceSlug: string; projectKey: string }> }) {
-  const { workspaceSlug, projectKey } = await params;
+async function Backlog({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ workspaceSlug: string; projectKey: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [{ workspaceSlug, projectKey }, query] = await Promise.all([params, searchParams]);
+  const filters = parseTaskFilters((k) => {
+    const v = query[k];
+    return typeof v === "string" ? v : null;
+  });
   const user = await requireUser();
   const [workspace, project] = await Promise.all([
     getWorkspace(workspaceSlug, user.id),
@@ -50,8 +63,9 @@ async function Backlog({ params }: { params: Promise<{ workspaceSlug: string; pr
   const sprints = [...project.sprints].sort((a, b) => ORDER[a.status] - ORDER[b.status]);
   const planned = sprints.filter((s) => s.status === "PLANNED").map((s) => ({ id: s.id, name: s.name }));
   const hasActive = sprints.some((s) => s.status === "ACTIVE");
-  const tasksOf = (sprintId: string | null) =>
-    project.tasks.filter((t) => (t.sprint?.id ?? null) === sprintId);
+  const visible = filterTasks(project.tasks, filters, user.id);
+  const tasksOf = (sprintId: string | null, list = visible) =>
+    list.filter((t) => (t.sprint?.id ?? null) === sprintId);
 
   const open = sprints.filter((s) => s.status !== "COMPLETED");
   const completed = sprints.filter((s) => s.status === "COMPLETED");
@@ -69,7 +83,9 @@ async function Backlog({ params }: { params: Promise<{ workspaceSlug: string; pr
           sprint && canPlan ? (
             <SprintActions
               sprint={sprint}
-              openTaskCodes={tasks.filter((t) => !doneIds.has(t.statusId)).map((t) => t.code)}
+              openTaskCodes={tasksOf(sprint.id, project.tasks)
+                .filter((t) => !doneIds.has(t.statusId))
+                .map((t) => t.code)}
               plannedSprints={planned.filter((p) => p.id !== sprint.id)}
               hasActiveSprint={hasActive}
             />
@@ -121,6 +137,8 @@ async function Backlog({ params }: { params: Promise<{ workspaceSlug: string; pr
           </div>
         }
       />
+
+      <TaskFilterBar members={workspace.members} />
 
       {open.map(section)}
       {section(null)}

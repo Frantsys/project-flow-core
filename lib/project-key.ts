@@ -2,7 +2,7 @@
 export function suggestKey(name: string) {
   const words = name
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "") // remove acentos: "Gestão" → "Gestao"
+    .replace(/\p{Diacritic}/gu, "") // remove acentos: "Gestão" → "Gestao"
     .toUpperCase()
     .split(/[^A-Z0-9]+/)
     .filter(Boolean);
