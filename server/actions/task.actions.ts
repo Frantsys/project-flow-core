@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { Types } from "mongoose";
 import dbConnect from "@/lib/db";
-import { Project, Sprint, Task, User, Workspace } from "../db/models";
+import { Comment, Notification, Project, Sprint, Task, User, Workspace } from "../db/models";
+import { parseMentions } from "@/lib/mentions";
+import { notify } from "../services/notification.service";
 import { createAction, fail } from "../lib/action";
 import { can } from "@/lib/permissions";
 import { requirePermission } from "../lib/access";
@@ -12,6 +14,7 @@ import { placeTask, rankAtEnd } from "../lib/rank";
 import {
   addCommentSchema,
   addSubtaskSchema,
+  editCommentSchema,
   commentRefSchema,
   createTaskSchema,
   subtaskRefSchema,
@@ -47,7 +50,6 @@ interface TaskLean {
   assigneeId?: Types.ObjectId | null;
   sprintId?: Types.ObjectId | null;
   subtasks: { _id: Types.ObjectId; title: string; isCompleted: boolean; order: number }[];
-  comments: { _id: Types.ObjectId; authorId: Types.ObjectId }[];
 }
 
 type HistoryDetails = {
@@ -99,7 +101,16 @@ async function loadTask(taskId: string, userId: string) {
       details: { targetTitle: `${task.code} ${task.title}`, ...details },
     });
 
-  return { task, project, role, history };
+  /** Endereço da tarefa e título como aparecem nas notificações. */
+  const target = async () => {
+    const ws = await Workspace.findById(project.workspaceId).select("slug").lean();
+    return {
+      title: `${task.code} ${task.title}`,
+      href: `/w/${ws?.slug}/projects/${project.key}/tasks/${task.code}`,
+    };
+  };
+
+  return { task, project, role, history, target };
 }
 
 /**
@@ -175,7 +186,7 @@ export const updateTaskAction = createAction({
   name: "task.update",
   schema: updateTaskSchema,
   handler: async (data, { userId }) => {
-    const { task, project, history } = await loadTask(data.taskId, userId);
+    const { task, project, history, target } = await loadTask(data.taskId, userId);
 
     const set: Record<string, unknown> = {};
     const changes: HistoryDetails[] = [];
@@ -264,6 +275,16 @@ export const updateTaskAction = createAction({
     if (changes.length > 0) {
       await Task.updateOne({ _id: task._id }, { $set: set }, { runValidators: true });
       await Promise.all(changes.map((c) => history("MODIFY", "TASK", c)));
+      if (set.assigneeId) {
+        await notify({
+          type: "ASSIGNED",
+          recipients: [String(set.assigneeId)],
+          actorId: userId,
+          workspaceId: project.workspaceId,
+          taskId: task._id,
+          ...(await target()),
+        });
+      }
       revalidateProjectPages();
     }
 
@@ -327,6 +348,8 @@ export const deleteTaskAction = createAction({
     }
 
     await Task.deleteOne({ _id: task._id });
+    await Comment.deleteMany({ taskId: task._id });
+    await Notification.deleteMany({ taskId: task._id });
     await history("DELETE", "TASK", {});
 
     revalidateProjectPages();
@@ -396,38 +419,97 @@ export const deleteSubtaskAction = createAction({
   },
 });
 
+/** Membros do workspace com nome, para achar as menções do texto. */
+async function workspaceMembers(workspaceId: Types.ObjectId) {
+  const ws = await Workspace.findById(workspaceId)
+    .select("members.userId")
+    .populate<{ members: { userId: { _id: Types.ObjectId; username: string } | null }[] }>(
+      "members.userId",
+      "username"
+    )
+    .lean();
+  return (ws?.members ?? []).flatMap((m) =>
+    m.userId ? [{ id: m.userId._id.toString(), name: m.userId.username }] : []
+  );
+}
+
+/**
+ * Comenta na tarefa. Quem foi mencionado com @Nome recebe "mencionou você"; criador, responsável e
+ * quem já comentou recebem "comentou" (sem aviso duplicado para quem foi mencionado).
+ */
 export const addCommentAction = createAction({
   name: "task.addComment",
   schema: addCommentSchema,
   handler: async ({ taskId, content }, { userId }) => {
-    const { task, history } = await loadTask(taskId, userId);
+    const { task, project, history, target } = await loadTask(taskId, userId);
+    const { ids: mentions } = parseMentions(content, await workspaceMembers(project.workspaceId));
 
-    const commentId = new Types.ObjectId();
-    await Task.updateOne(
-      { _id: task._id },
-      { $push: { comments: { _id: commentId, authorId: userId, content, createdAt: new Date() } } }
-    );
-    await history("CREATE", "COMMENT", {}, commentId);
+    const comment = await Comment.create({
+      taskId: task._id,
+      projectId: project._id,
+      workspaceId: project.workspaceId,
+      authorId: userId,
+      content,
+      mentions,
+    });
+    await history("CREATE", "COMMENT", {}, comment._id);
+
+    const where = await target();
+    const base = { actorId: userId, workspaceId: project.workspaceId, taskId: task._id, ...where };
+    await notify({ ...base, type: "MENTIONED", recipients: mentions });
+    const previous = await Comment.distinct("authorId", { taskId: task._id });
+    const followers = [task.reporterId, task.assigneeId, ...previous]
+      .filter(Boolean)
+      .map(String)
+      .filter((id) => !mentions.includes(id));
+    await notify({ ...base, type: "COMMENTED", recipients: followers });
 
     revalidateProjectPages();
-    return { id: commentId.toString() };
+    return { id: comment._id.toString() };
   },
 });
 
-/** Exclui um comentário: o autor, um admin ou o dono do workspace. */
+/** Edita o próprio comentário. Só avisa quem passou a ser mencionado agora. */
+export const editCommentAction = createAction({
+  name: "task.editComment",
+  schema: editCommentSchema,
+  handler: async ({ taskId, commentId, content }, { userId }) => {
+    const { task, project, target } = await loadTask(taskId, userId);
+    const comment = await Comment.findOne({ _id: commentId, taskId: task._id }).lean();
+    if (!comment) fail("Comentário não encontrado.");
+    if (comment.authorId.toString() !== userId) fail("Você só pode editar os seus comentários.");
+
+    const { ids: mentions } = parseMentions(content, await workspaceMembers(project.workspaceId));
+    await Comment.updateOne({ _id: comment._id }, { $set: { content, mentions, editedAt: new Date() } });
+
+    const before = new Set(comment.mentions.map(String));
+    await notify({
+      type: "MENTIONED",
+      recipients: mentions.filter((id) => !before.has(id)),
+      actorId: userId,
+      workspaceId: project.workspaceId,
+      taskId: task._id,
+      ...(await target()),
+    });
+
+    revalidateProjectPages();
+    return { id: commentId };
+  },
+});
+
 export const deleteCommentAction = createAction({
   name: "task.deleteComment",
   schema: commentRefSchema,
   handler: async ({ taskId, commentId }, { userId }) => {
     const { task, role, history } = await loadTask(taskId, userId);
 
-    const comment = task.comments.find((c) => c._id.toString() === commentId);
+    const comment = await Comment.findOne({ _id: commentId, taskId: task._id }).select("authorId").lean();
     if (!comment) fail("Comentário não encontrado.");
     if (!can(role, "comment.deleteAny") && comment.authorId.toString() !== userId) {
       fail("Você só pode excluir os seus comentários.");
     }
 
-    await Task.updateOne({ _id: task._id }, { $pull: { comments: { _id: comment._id } } });
+    await Comment.deleteOne({ _id: comment._id });
     await history("DELETE", "COMMENT", {}, comment._id);
 
     revalidateProjectPages();

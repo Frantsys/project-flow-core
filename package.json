@@ -15,7 +15,8 @@
     "test:watch": "vitest",
     "seed": "tsx --env-file=.env.local scripts/seed.ts",
     "migrate:statuses": "tsx --env-file=.env.local scripts/migrate-statuses.ts",
-    "migrate:ranks": "tsx --env-file=.env.local scripts/migrate-ranks.ts"
+    "migrate:ranks": "tsx --env-file=.env.local scripts/migrate-ranks.ts",
+    "migrate:comments": "tsx --env-file=.env.local scripts/migrate-comments.ts"
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.11.3",

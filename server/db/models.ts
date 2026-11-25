@@ -12,6 +12,8 @@ export interface IUser extends Document {
   emailVerified?: Date | null;
   image?: string | null;
   passwordHash?: string | null;
+  /** Recebe por e-mail as notificações de atribuição e menção. */
+  notifyByEmail: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,6 +26,7 @@ const UserSchema = new Schema<IUser>(
     image: { type: String, default: null },
 
     passwordHash: { type: String, select: false },
+    notifyByEmail: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
@@ -175,13 +178,6 @@ export interface ISubtask {
   order: number;
 }
 
-export interface IComment {
-  _id: Types.ObjectId;
-  authorId: Types.ObjectId;
-  content: string;
-  createdAt: Date;
-}
-
 export interface ITask extends Document {
   projectId: Types.ObjectId;
   sprintId?: Types.ObjectId | null;
@@ -201,7 +197,6 @@ export interface ITask extends Document {
   aiSummary?: string | null;
   dueDate?: Date | null;
   subtasks: ISubtask[];
-  comments: IComment[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -211,12 +206,6 @@ const SubtaskSchema = new Schema<ISubtask>({
   isCompleted: { type: Boolean, default: false },
   generatedByAi: { type: Boolean, default: false },
   order: { type: Number, default: 0 },
-});
-
-const CommentSchema = new Schema<IComment>({
-  authorId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-  content: { type: String, required: true, trim: true },
-  createdAt: { type: Date, default: Date.now },
 });
 
 const TaskSchema = new Schema<ITask>(
@@ -245,7 +234,6 @@ const TaskSchema = new Schema<ITask>(
     aiSummary: { type: String, default: null },
     dueDate: { type: Date, default: null },
     subtasks: { type: [SubtaskSchema], default: [] },
-    comments: { type: [CommentSchema], default: [] },
   },
   { timestamps: true }
 );
@@ -418,3 +406,75 @@ InvitationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 export const Invitation: Model<IInvitation> =
   mongoose.models.Invitation || mongoose.model<IInvitation>("Invitation", InvitationSchema);
+
+/**
+ * Comentário de tarefa. Fica fora do documento da tarefa (que antes crescia sem limite) para
+ * poder ser paginado, editado e citado em notificações.
+ */
+export interface IComment {
+  _id: Types.ObjectId;
+  taskId: Types.ObjectId;
+  projectId: Types.ObjectId;
+  workspaceId: Types.ObjectId;
+  authorId: Types.ObjectId;
+  content: string;
+  /** Pessoas mencionadas com @Nome no texto. */
+  mentions: Types.ObjectId[];
+  editedAt: Date | null;
+  createdAt: Date;
+}
+
+const CommentSchema = new Schema<IComment>(
+  {
+    taskId: { type: Schema.Types.ObjectId, ref: "Task", required: true },
+    projectId: { type: Schema.Types.ObjectId, ref: "Project", required: true, index: true },
+    workspaceId: { type: Schema.Types.ObjectId, ref: "Workspace", required: true, index: true },
+    authorId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    content: { type: String, required: true, trim: true, maxlength: 5000 },
+    mentions: { type: [Schema.Types.ObjectId], default: [] },
+    editedAt: { type: Date, default: null },
+  },
+  { timestamps: { createdAt: true, updatedAt: false }, versionKey: false }
+);
+
+CommentSchema.index({ taskId: 1, createdAt: 1 });
+
+export const Comment: Model<IComment> =
+  mongoose.models.Comment || mongoose.model<IComment>("Comment", CommentSchema);
+
+export type NotificationType = "ASSIGNED" | "MENTIONED" | "COMMENTED" | "INVITE_ACCEPTED";
+
+/** Aviso para uma pessoa. Some sozinho depois de 90 dias (índice TTL). */
+export interface INotification {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
+  type: NotificationType;
+  actorId: Types.ObjectId;
+  workspaceId: Types.ObjectId;
+  taskId: Types.ObjectId | null;
+  /** Alvo como aparece na tela: "PF-12 Corrigir login" ou o nome do workspace. */
+  title: string;
+  href: string;
+  readAt: Date | null;
+  createdAt: Date;
+}
+
+const NotificationSchema = new Schema<INotification>(
+  {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    type: { type: String, enum: ["ASSIGNED", "MENTIONED", "COMMENTED", "INVITE_ACCEPTED"], required: true },
+    actorId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    workspaceId: { type: Schema.Types.ObjectId, ref: "Workspace", required: true, index: true },
+    taskId: { type: Schema.Types.ObjectId, ref: "Task", default: null, index: true },
+    title: { type: String, required: true },
+    href: { type: String, required: true },
+    readAt: { type: Date, default: null },
+  },
+  { timestamps: { createdAt: true, updatedAt: false }, versionKey: false }
+);
+
+NotificationSchema.index({ userId: 1, createdAt: -1 });
+NotificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 3600 });
+
+export const Notification: Model<INotification> =
+  mongoose.models.Notification || mongoose.model<INotification>("Notification", NotificationSchema);

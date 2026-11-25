@@ -9,7 +9,17 @@
 import bcrypt from "bcryptjs";
 import mongoose, { Types } from "mongoose";
 import dbConnect, { DB_NAME } from "@/lib/db";
-import { ChangeHistory, DocumentModel, Project, Sprint, Task, User, Workspace } from "@/server/db/models";
+import {
+  ChangeHistory,
+  Comment,
+  DocumentModel,
+  Notification,
+  Project,
+  Sprint,
+  Task,
+  User,
+  Workspace,
+} from "@/server/db/models";
 import { backfillRanks } from "@/server/lib/rank";
 
 const PRODUCTION_DB = "project-flow";
@@ -115,6 +125,8 @@ async function main() {
     await Task.deleteMany({ projectId: { $in: oldProjects } });
     await Sprint.deleteMany({ projectId: { $in: oldProjects } });
     await DocumentModel.deleteMany({ workspaceId: oldWs._id });
+    await Comment.deleteMany({ workspaceId: oldWs._id });
+    await Notification.deleteMany({ workspaceId: oldWs._id });
     await ChangeHistory.deleteMany({ workspaceId: oldWs._id });
     await Project.deleteMany({ workspaceId: oldWs._id });
     await Workspace.deleteOne({ _id: oldWs._id });
@@ -222,20 +234,22 @@ async function main() {
                 generatedByAi: false,
               }))
             : [],
-        comments:
-          i % 3 === 1
-            ? [
-                {
-                  authorId: team[(i + 2) % team.length],
-                  content: "Posso pegar essa depois da daily.",
-                  createdAt: new Date(now - DAY),
-                },
-              ]
-            : [],
         createdAt: new Date(now - (30 - i) * DAY),
       };
     });
-    await Task.insertMany(tasks);
+    const inserted = await Task.insertMany(tasks);
+    await Comment.insertMany(
+      inserted
+        .filter((_, i) => i % 3 === 1)
+        .map((t, i) => ({
+          taskId: t._id,
+          projectId: project._id,
+          workspaceId: ws._id,
+          authorId: team[(i + 2) % team.length],
+          content: "Posso pegar essa depois da daily.",
+          createdAt: new Date(now - DAY),
+        }))
+    );
     await backfillRanks(project._id, statuses);
     await Project.updateOne({ _id: project._id }, { $set: { taskSequence: tasks.length } });
     taskCount += tasks.length;
@@ -254,6 +268,43 @@ async function main() {
       }))
     );
   }
+
+  // a conta demo já entra com avisos no sino: uma menção e uma atribuição feitas pela Marina
+  const pf = await Project.findOne({ workspaceId: ws._id, key: "PF" }).lean();
+  const mentioned = await Task.findOne({ projectId: pf!._id, code: "PF-6" }).lean();
+  const assigned = await Task.findOne({ projectId: pf!._id, code: "PF-12" }).lean();
+  await Comment.create({
+    taskId: mentioned!._id,
+    projectId: pf!._id,
+    workspaceId: ws._id,
+    authorId: users.marina,
+    content: "@Conta Demo consegue revisar o texto do estado vazio antes da daily?",
+    mentions: [users.demo],
+  });
+  await Task.updateOne({ _id: assigned!._id }, { $set: { assigneeId: users.demo } });
+  const taskHref = (code: string) => `/w/${SLUG}/projects/PF/tasks/${code}`;
+  await Notification.insertMany([
+    {
+      userId: users.demo,
+      type: "MENTIONED",
+      actorId: users.marina,
+      workspaceId: ws._id,
+      taskId: mentioned!._id,
+      title: `PF-6 ${mentioned!.title}`,
+      href: taskHref("PF-6"),
+      createdAt: new Date(now - 2 * 3_600_000),
+    },
+    {
+      userId: users.demo,
+      type: "ASSIGNED",
+      actorId: users.marina,
+      workspaceId: ws._id,
+      taskId: assigned!._id,
+      title: `PF-12 ${assigned!.title}`,
+      href: taskHref("PF-12"),
+      createdAt: new Date(now - 5 * 3_600_000),
+    },
+  ]);
 
   const guide = await DocumentModel.create({
     workspaceId: ws._id,

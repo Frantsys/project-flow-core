@@ -1,5 +1,16 @@
 import "server-only";
-import { ChangeHistory, DocumentModel, Project, Sprint, Task, Workspace, WorkspaceRole } from "../db/models";
+import {
+  ChangeHistory,
+  DocumentModel,
+  Project,
+  Sprint,
+  Task,
+  Workspace,
+  WorkspaceRole,
+  Comment,
+  Notification,
+  Invitation,
+} from "../db/models";
 import dbConnect from "@/lib/db";
 import {
   WorkspaceDTO,
@@ -232,6 +243,9 @@ export async function deleteWorkspace(
   try {
     await session.withTransaction(async () => {
       await Task.deleteMany({ projectId: { $in: projectIds } }, { session });
+      await Comment.deleteMany({ workspaceId }, { session });
+      await Notification.deleteMany({ workspaceId }, { session });
+      await Invitation.deleteMany({ workspaceId }, { session });
       await Sprint.deleteMany({ projectId: { $in: projectIds } }, { session });
       await DocumentModel.deleteMany({ workspaceId }, { session });
       await ChangeHistory.deleteMany({ workspaceId }, { session });

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import mongoose, { Types } from "mongoose";
 import dbConnect from "@/lib/db";
-import { ChangeHistory, DocumentModel, Project, Sprint, Task } from "../db/models";
+import { ChangeHistory, Comment, DocumentModel, Project, Sprint, Task } from "../db/models";
 import { createAction, fail } from "../lib/action";
 import { requirePermission } from "../lib/access";
 import { recordHistory } from "../services/history.service";
@@ -143,6 +143,7 @@ export const deleteProjectAction = createAction({
     try {
       await session.withTransaction(async () => {
         await Task.deleteMany({ projectId }, { session });
+        await Comment.deleteMany({ projectId }, { session });
         await Sprint.deleteMany({ projectId }, { session });
         await DocumentModel.deleteMany({ projectId }, { session });
         await ChangeHistory.deleteMany(

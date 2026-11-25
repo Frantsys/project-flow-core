@@ -127,6 +127,7 @@ export interface CommentDTO {
   id: string;
   content: string;
   createdAt: string;
+  editedAt: string | null;
   author: PersonDTO | null; // autor pode ter sido removido
 }
 

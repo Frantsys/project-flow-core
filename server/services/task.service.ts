@@ -1,7 +1,7 @@
 import "server-only";
 import { Types } from "mongoose";
 import dbConnect from "@/lib/db";
-import { Project, Task, Workspace } from "../db/models";
+import { Comment, Project, Task, Workspace } from "../db/models";
 import { PersonDTO, TaskDetailDTO, TaskPriority, TaskType } from "../db/types";
 import { findHistory } from "./history.service";
 
@@ -34,7 +34,6 @@ interface TaskDetailLean {
     generatedByAi: boolean;
     order: number;
   }[];
-  comments: { _id: Types.ObjectId; authorId: PersonLean | null; content: string; createdAt: Date }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -71,11 +70,17 @@ export async function getTaskDetail(
     .populate("sprintId", "name")
     .populate("assigneeId", "username image")
     .populate("reporterId", "username image")
-    .populate("comments.authorId", "username image")
     .lean<TaskDetailLean>();
   if (!task) return null;
 
-  const history = await findHistory({ targetId: task._id }, 30);
+  const [history, comments] = await Promise.all([
+    findHistory({ targetId: task._id }, 30),
+    Comment.find({ taskId: task._id })
+      .sort({ createdAt: 1 })
+      .limit(200)
+      .populate<{ authorId: PersonLean | null }>("authorId", "username image")
+      .lean(),
+  ]);
 
   return {
     id: task._id.toString(),
@@ -101,10 +106,11 @@ export async function getTaskDetail(
         isCompleted: s.isCompleted,
         generatedByAi: s.generatedByAi,
       })),
-    comments: task.comments.map((c) => ({
+    comments: comments.map((c) => ({
       id: c._id.toString(),
       content: c.content,
-      createdAt: new Date(c.createdAt).toISOString(),
+      createdAt: c.createdAt.toISOString(),
+      editedAt: c.editedAt ? c.editedAt.toISOString() : null,
       author: person(c.authorId),
     })),
     history,

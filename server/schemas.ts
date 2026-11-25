@@ -236,6 +236,10 @@ export const commentRefSchema = taskIdSchema.extend({
   commentId: z.string().regex(objectIdRegex, "ID de comentário inválido."),
 });
 
+export const editCommentSchema = addCommentSchema.extend({
+  commentId: z.string().regex(objectIdRegex, "ID de comentário inválido."),
+});
+
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.");
 
 export const createSprintSchema = z

@@ -6,9 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Ellipsis, Link2, Trash2, X } from "lucide-react";
 import {
-  addCommentAction,
   addSubtaskAction,
-  deleteCommentAction,
   deleteSubtaskAction,
   deleteTaskAction,
   toggleSubtaskAction,
@@ -42,6 +40,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { UserAvatar } from "@/components/user-avatar";
 import { TaskTypeIndicator } from "@/components/projects/task-type";
+import { TaskComments } from "./task-comments";
+import { useRefreshOnFocus } from "@/hooks/use-refresh-on-focus";
 import type {
   ProjectSprintSummaryDTO,
   TaskDetailDTO,
@@ -79,10 +79,10 @@ export function TaskDetail({
 }: TaskDetailProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  useRefreshOnFocus();
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description);
   const [newSubtask, setNewSubtask] = useState("");
-  const [comment, setComment] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const canDeleteTask = can(currentUser.role, "task.deleteAny") || task.reporter?.id === currentUser.id;
@@ -407,61 +407,12 @@ export function TaskDetail({
           </form>
         </section>
 
-        <section className="flex flex-col gap-3.5" aria-labelledby="sec-comments">
-          <h3 id="sec-comments" className="text-sm font-semibold">
-            Comentários
-          </h3>
-          {task.comments.map((c) => (
-            <div key={c.id} className="group flex gap-2.5">
-              <UserAvatar name={c.author?.name ?? "?"} image={c.author?.image} />
-              <div className="min-w-0 flex-1 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{c.author?.name ?? "Conta removida"}</span>
-                  <span className="text-xs text-muted-foreground">{timeAgo(c.createdAt)}</span>
-                  {(c.author?.id === currentUser.id || can(currentUser.role, "comment.deleteAny")) && (
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      aria-label="Excluir comentário"
-                      className="ml-auto opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-                      onClick={() => run(() => deleteCommentAction({ taskId: task.id, commentId: c.id }))}
-                    >
-                      <Trash2 aria-hidden="true" />
-                    </Button>
-                  )}
-                </div>
-                <p className="leading-relaxed whitespace-pre-wrap">{c.content}</p>
-              </div>
-            </div>
-          ))}
-          <form
-            className="flex flex-col gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!comment.trim()) return;
-              run(
-                () => addCommentAction({ taskId: task.id, content: comment }),
-                () => setComment("")
-              );
-            }}
-          >
-            <label htmlFor="new-comment" className="sr-only">
-              Novo comentário
-            </label>
-            <Textarea
-              id="new-comment"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              rows={3}
-              placeholder="Escreva um comentário…"
-            />
-            <div>
-              <Button type="submit" size="sm" disabled={!comment.trim() || pending}>
-                Comentar
-              </Button>
-            </div>
-          </form>
-        </section>
+        <TaskComments
+          taskId={task.id}
+          comments={task.comments}
+          members={members.map((m) => ({ id: m.id, name: m.name }))}
+          currentUser={currentUser}
+        />
 
         <Separator />
 
