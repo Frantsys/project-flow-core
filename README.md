@@ -21,6 +21,9 @@ subtarefas e comentários, documentos em árvore e histórico de tudo o que mudo
 - **Busca global e paleta de comandos** (Ctrl K ou /): tarefas, projetos, documentos e atalhos.
 - **Minhas tarefas:** tudo que está com você em todos os workspaces, agrupado por prazo.
 - **Tema claro e escuro** (ou o do sistema).
+- **Notificações:** sino com contador e caixa de entrada para atribuições, menções (@Nome) e
+  comentários nas tarefas que você criou, recebeu ou comentou; e-mail opcional para atribuição e menção.
+- **Comentários** editáveis, com @menções destacadas.
 - **Quadro kanban** com colunas configuráveis (nome, ordem e categoria A fazer / Em andamento /
   Concluído), criação rápida em cada coluna e "Mover para…".
 - **Tarefa completa** num painel lateral (ou página própria pelo link): status, prioridade, tipo,
@@ -106,6 +109,7 @@ O seed recusa rodar no banco de produção (`project-flow`).
 | `npm run lint`             | ESLint                                                            |
 | `npm run format`           | Prettier                                                          |
 | `npm run seed`             | dados de demonstração no banco de desenvolvimento                 |
+| `npm run migrate:comments` | move os comentários antigos para a coleção própria (M5)           |
 | `npm run migrate:ranks`    | dá posição na coluna às tarefas antigas (M4)                      |
 | `npm run migrate:statuses` | migra status antigos (texto) para entidade; aceita `-- --dry-run` |
 | `npm run build`            | build de produção                                                 |

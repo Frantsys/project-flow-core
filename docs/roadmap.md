@@ -578,3 +578,9 @@ A API do Claude não tem plano gratuito, mas o custo de um portfólio fica em ce
     do dnd-kit rola a página em vez de mover quando há rolagem;
   - filtros sem a biblioteca `nuqs` (URLSearchParams direto) e sem visões salvas;
   - formulários com react-hook-form (6.1) e atualização otimista fora do quadro (6.2) ficam para o M6.
+- **M5 — parcial**: comentários em coleção própria e editáveis (3.4), menções com @Nome,
+  notificações no app (sino e caixa de entrada) e por e-mail com preferência na conta.
+  - Tempo real (5.3) depende de uma conta no Pusher ou Ably; até lá, quadro e tarefa buscam os dados
+    de novo quando a pessoa volta para a aba.
+  - Anexos (3.5) dependem de um Blob store na Vercel; etiquetas (3.5) e aviso de prazo por cron
+    (2.6) ficam para a próxima rodada.
