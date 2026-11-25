@@ -11,7 +11,7 @@ Escolha **um** dos caminhos.
 2. Vercel › Project › **Storage** › **Create Database** › **MongoDB Atlas**.
 3. Escolha o plano gratuito (M0) e a região **São Paulo (sa-east-1)** ou a mais próxima das suas funções.
 4. A integração cria o cluster, libera o acesso da Vercel e grava `MONGODB_URI` no projeto.
-5. Confira se a URI tem o nome do banco antes do `?` (`…mongodb.net/project-flow?…`). Sem isso o Mongo usa o banco `test`.
+5. A URI da integração não traz o nome do banco; `lib/db.ts` usa `project-flow` (ou o valor de `MONGODB_DB`, se definido).
 
 ### Opção B — direto no Atlas
 1. [cloud.mongodb.com](https://cloud.mongodb.com) › **Create** › cluster **M0** › região `sa-east-1`.

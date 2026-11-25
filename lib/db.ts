@@ -30,6 +30,8 @@ async function dbConnect () {
     if (!cached.promise ) {
         cached.promise = mongoose.connect(MONGODB_URI, {
             bufferCommands: false,
+            // A URI criada pela integração Vercel + Atlas não traz o nome do banco; sem isto o Mongo usaria "test"
+            dbName: process.env.MONGODB_DB || "project-flow",
             // Funções serverless rodam muitas instâncias em paralelo: um pool pequeno por instância
             // evita estourar o limite de conexões do cluster (o M0 gratuito aceita 500)
             maxPoolSize: 10,
