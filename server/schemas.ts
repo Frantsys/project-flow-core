@@ -141,3 +141,50 @@ export const deleteProjectSchema = z.object({
 });
 
 export type DeleteProjectInput = z.infer<typeof deleteProjectSchema>;
+
+// O model Task aceita só estes tipos (EPIC ainda não existe no schema do Mongo)
+export const taskTypeSchema = z.enum(["TASK", "BUG", "STORY"]);
+export const taskPrioritySchema = z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]);
+
+export const createTaskSchema = z.object({
+  projectId: z
+    .string()
+    .regex(objectIdRegex, "ID de projeto inválido."),
+  title: z
+    .string()
+    .trim()
+    .min(2, "O título deve ter pelo menos 2 caracteres.")
+    .max(200, "O título deve ter no máximo 200 caracteres."),
+  type: taskTypeSchema.default("TASK"),
+  priority: taskPrioritySchema.default("MEDIUM"),
+  // vazio = primeiro status do projeto
+  status: z.string().trim().max(50).optional(),
+  storyPoints: z
+    .number("Informe um número.")
+    .int("Use um número inteiro.")
+    .min(0, "Os pontos não podem ser negativos.")
+    .max(100, "Use no máximo 100 pontos.")
+    .nullable()
+    .optional(),
+  // "AAAA-MM-DD" vindo de <input type="date">
+  dueDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.")
+    .nullable()
+    .optional(),
+});
+
+export type CreateTaskInput = z.input<typeof createTaskSchema>;
+
+export const updateTaskStatusSchema = z.object({
+  taskId: z
+    .string()
+    .regex(objectIdRegex, "ID de tarefa inválido."),
+  status: z
+    .string()
+    .trim()
+    .min(1, "Informe o status.")
+    .max(50),
+});
+
+export type UpdateTaskStatusInput = z.infer<typeof updateTaskStatusSchema>;
