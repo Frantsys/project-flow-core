@@ -1,15 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getServerSession } from "next-auth";
-import { Types } from "mongoose";
-import { z } from "zod";
-
-import { authOptions } from "@/lib/auth";
+import mongoose, { Types } from "mongoose";
 import dbConnect from "@/lib/db";
-import { ActionResult } from "@/types";
 import { DocumentModel, Project } from "../db/models";
-import { verifyWorkspacePermission } from "../services/permission.service";
+import { createAction, fail } from "../lib/action";
+import { ALL_ROLES, requireWorkspaceRole } from "../lib/access";
 import { recordHistory } from "../services/history.service";
 import { createDocumentSchema, documentIdSchema, updateDocumentSchema } from "../schemas";
 
@@ -20,59 +16,43 @@ interface DocLean {
   title: string;
 }
 
-function invalid(error: z.ZodError) {
-  return {
-    success: false as const,
-    error: "Dados inválidos.",
-    fieldErrors: z.flattenError(error).fieldErrors,
-  };
-}
-
 function revalidateDocs() {
   revalidatePath("/w/[workspaceSlug]/docs", "layout");
 }
 
-/** Qualquer membro do workspace pode criar, editar e excluir documentos. */
-async function member(workspaceId: string, userId: string) {
-  return verifyWorkspacePermission({ workspaceId, userId, allowedRoles: ["OWNER", "ADMIN", "MEMBER"] });
+/** Documento existente + papel do usuário. Qualquer membro pode criar, editar e excluir documentos. */
+async function loadDocument(documentId: string, userId: string) {
+  await dbConnect();
+  const doc = await DocumentModel.findById(documentId).select("workspaceId projectId title").lean<DocLean>();
+  if (!doc) fail("Documento não encontrado.");
+  const role = await requireWorkspaceRole(doc.workspaceId.toString(), userId, ALL_ROLES);
+  return { doc, role };
 }
 
-export async function createDocumentAction(input: {
-  workspaceId: string;
-  parentId?: string | null;
-  projectId?: string | null;
-  title?: string;
-}): Promise<ActionResult<{ id: string }>> {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return { success: false, error: "Sessão expirada. Faça login novamente." };
-
-    const parsed = createDocumentSchema.safeParse(input);
-    if (!parsed.success) return invalid(parsed.error);
-    const { workspaceId, parentId, title } = parsed.data;
-    let projectId = parsed.data.projectId ?? null;
-
-    const permission = await member(workspaceId, session.user.id);
-    if (!permission.authorized) return { success: false, error: permission.error };
-
+export const createDocumentAction = createAction({
+  name: "document.create",
+  schema: createDocumentSchema,
+  handler: async ({ workspaceId, parentId, title, projectId: requestedProjectId }, { userId }) => {
+    const role = await requireWorkspaceRole(workspaceId, userId, ALL_ROLES);
     await dbConnect();
 
+    let projectId = requestedProjectId ?? null;
     if (parentId) {
       const parent = await DocumentModel.findOne({ _id: parentId, workspaceId })
         .select("projectId")
         .lean<DocLean>();
-      if (!parent) return { success: false, error: "Documento pai não encontrado." };
+      if (!parent) fail("Documento pai não encontrado.");
       projectId = parent.projectId?.toString() ?? null; // subdocumento fica no mesmo projeto do pai
     }
     if (projectId && !(await Project.exists({ _id: projectId, workspaceId }))) {
-      return { success: false, error: "Projeto não encontrado neste workspace." };
+      fail("Projeto não encontrado neste workspace.");
     }
 
     const doc = await DocumentModel.create({
       workspaceId,
       projectId,
       parentDocId: parentId ?? null,
-      authorId: session.user.id,
+      authorId: userId,
       title: title || "Sem título",
       content: "",
     });
@@ -80,8 +60,8 @@ export async function createDocumentAction(input: {
     await recordHistory({
       workspaceId,
       projectId,
-      userId: session.user.id,
-      actorRole: permission.role,
+      userId,
+      actorRole: role,
       action: "CREATE",
       targetType: "DOCUMENT",
       targetId: doc._id,
@@ -89,34 +69,15 @@ export async function createDocumentAction(input: {
     });
 
     revalidateDocs();
-    return { success: true, data: { id: doc._id.toString() } };
-  } catch (error) {
-    console.error("[createDocumentAction]:", error);
-    return { success: false, error: "Erro interno ao criar o documento." };
-  }
-}
+    return { id: doc._id.toString() };
+  },
+});
 
-export async function updateDocumentAction(input: {
-  documentId: string;
-  title: string;
-  content: string;
-}): Promise<ActionResult<{ updatedAt: string }>> {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return { success: false, error: "Sessão expirada. Faça login novamente." };
-
-    const parsed = updateDocumentSchema.safeParse(input);
-    if (!parsed.success) return invalid(parsed.error);
-    const { documentId, title, content } = parsed.data;
-
-    await dbConnect();
-    const doc = await DocumentModel.findById(documentId)
-      .select("workspaceId projectId title")
-      .lean<DocLean>();
-    if (!doc) return { success: false, error: "Documento não encontrado." };
-
-    const permission = await member(doc.workspaceId.toString(), session.user.id);
-    if (!permission.authorized) return { success: false, error: permission.error };
+export const updateDocumentAction = createAction({
+  name: "document.update",
+  schema: updateDocumentSchema,
+  handler: async ({ documentId, title, content }, { userId }) => {
+    const { doc, role } = await loadDocument(documentId, userId);
 
     const updated = await DocumentModel.findByIdAndUpdate(
       documentId,
@@ -129,8 +90,8 @@ export async function updateDocumentAction(input: {
     await recordHistory({
       workspaceId: doc.workspaceId,
       projectId: doc.projectId ?? null,
-      userId: session.user.id,
-      actorRole: permission.role,
+      userId,
+      actorRole: role,
       action: "MODIFY",
       targetType: "DOCUMENT",
       targetId: doc._id,
@@ -141,32 +102,16 @@ export async function updateDocumentAction(input: {
     });
 
     revalidateDocs();
-    return { success: true, data: { updatedAt: new Date(updated?.updatedAt ?? Date.now()).toISOString() } };
-  } catch (error) {
-    console.error("[updateDocumentAction]:", error);
-    return { success: false, error: "Erro interno ao salvar o documento." };
-  }
-}
+    return { updatedAt: new Date(updated?.updatedAt ?? Date.now()).toISOString() };
+  },
+});
 
-/** Exclui o documento e todos os subdocumentos abaixo dele. */
-export async function deleteDocumentAction(input: {
-  documentId: string;
-}): Promise<ActionResult<{ deleted: number }>> {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return { success: false, error: "Sessão expirada. Faça login novamente." };
-
-    const parsed = documentIdSchema.safeParse(input);
-    if (!parsed.success) return invalid(parsed.error);
-
-    await dbConnect();
-    const doc = await DocumentModel.findById(parsed.data.documentId)
-      .select("workspaceId projectId title")
-      .lean<DocLean>();
-    if (!doc) return { success: false, error: "Documento não encontrado." };
-
-    const permission = await member(doc.workspaceId.toString(), session.user.id);
-    if (!permission.authorized) return { success: false, error: permission.error };
+/** Exclui o documento e todos os subdocumentos abaixo dele, numa transação. */
+export const deleteDocumentAction = createAction({
+  name: "document.delete",
+  schema: documentIdSchema,
+  handler: async ({ documentId }, { userId }) => {
+    const { doc, role } = await loadDocument(documentId, userId);
 
     // coleta a subárvore nível a nível (a árvore de documentos é rasa na prática)
     const ids: Types.ObjectId[] = [doc._id];
@@ -179,13 +124,21 @@ export async function deleteDocumentAction(input: {
       ids.push(...frontier);
     }
 
-    const result = await DocumentModel.deleteMany({ _id: { $in: ids } });
+    let deleted = 0;
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        deleted = (await DocumentModel.deleteMany({ _id: { $in: ids } }, { session })).deletedCount;
+      });
+    } finally {
+      await session.endSession();
+    }
 
     await recordHistory({
       workspaceId: doc.workspaceId,
       projectId: doc.projectId ?? null,
-      userId: session.user.id,
-      actorRole: permission.role,
+      userId,
+      actorRole: role,
       action: "DELETE",
       targetType: "DOCUMENT",
       targetId: doc._id,
@@ -193,9 +146,6 @@ export async function deleteDocumentAction(input: {
     });
 
     revalidateDocs();
-    return { success: true, data: { deleted: result.deletedCount } };
-  } catch (error) {
-    console.error("[deleteDocumentAction]:", error);
-    return { success: false, error: "Erro interno ao excluir o documento." };
-  }
-}
+    return { deleted };
+  },
+});

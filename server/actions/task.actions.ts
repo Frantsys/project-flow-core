@@ -1,27 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getServerSession } from "next-auth";
 import { Types } from "mongoose";
-import { z } from "zod";
-
-import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
-import { ActionResult } from "@/types";
-import { Project, Sprint, Task, User, Workspace, WorkspaceRole } from "../db/models";
-import { verifyWorkspacePermission } from "../services/permission.service";
+import { Project, Sprint, Task, User, Workspace } from "../db/models";
+import { createAction, fail } from "../lib/action";
+import { ALL_ROLES, requireWorkspaceRole } from "../lib/access";
 import { recordHistory } from "../services/history.service";
 import {
   addCommentSchema,
   addSubtaskSchema,
   commentRefSchema,
-  CreateTaskInput,
   createTaskSchema,
   subtaskRefSchema,
   taskIdSchema,
-  UpdateTaskInput,
   updateTaskSchema,
-  UpdateTaskStatusInput,
   updateTaskStatusSchema,
 } from "../schemas";
 
@@ -35,6 +28,7 @@ interface ProjectForTaskLean {
 interface TaskLean {
   _id: Types.ObjectId;
   projectId: Types.ObjectId;
+  reporterId: Types.ObjectId;
   code: string;
   title: string;
   description?: string;
@@ -49,17 +43,19 @@ interface TaskLean {
   comments: { _id: Types.ObjectId; authorId: Types.ObjectId }[];
 }
 
-type Fail = { success: false; error: string; fieldErrors?: Record<string, string[]> };
-
-const SESSION_EXPIRED: Fail = { success: false, error: "Sessão expirada. Faça login novamente." };
-
-function invalid(error: z.ZodError): Fail {
-  return { success: false, error: "Dados inválidos.", fieldErrors: z.flattenError(error).fieldErrors };
-}
+type HistoryDetails = {
+  targetTitle?: string;
+  field?: string;
+  oldValue?: string | null;
+  newValue?: string | null;
+};
 
 function revalidateProjectPages() {
   revalidatePath("/w/[workspaceSlug]/projects/[projectKey]", "layout");
 }
+
+const dateOnly = (d?: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : null);
+const toDate = (d: string) => new Date(`${d}T00:00:00.000Z`);
 
 /**
  * Carrega tarefa + projeto e confere que o usuário é membro do workspace.
@@ -69,31 +65,26 @@ async function loadTask(taskId: string, userId: string) {
   await dbConnect();
 
   const task = await Task.findById(taskId).lean<TaskLean>();
-  if (!task) return { ok: false as const, error: "Tarefa não encontrada." };
+  if (!task) fail("Tarefa não encontrada.");
 
   const project = await Project.findById(task.projectId)
     .select("workspaceId key statuses")
     .lean<ProjectForTaskLean>();
-  if (!project) return { ok: false as const, error: "Projeto não encontrado." };
+  if (!project) fail("Projeto não encontrado.");
 
-  const permission = await verifyWorkspacePermission({
-    workspaceId: project.workspaceId.toString(),
-    userId,
-    allowedRoles: ["OWNER", "ADMIN", "MEMBER"],
-  });
-  if (!permission.authorized) return { ok: false as const, error: permission.error };
+  const role = await requireWorkspaceRole(project.workspaceId.toString(), userId, ALL_ROLES);
 
   const history = (
     action: "CREATE" | "MODIFY" | "DELETE",
     targetType: "TASK" | "SUBTASK" | "COMMENT",
-    details: { targetTitle?: string; field?: string; oldValue?: string | null; newValue?: string | null },
+    details: HistoryDetails,
     targetId: Types.ObjectId | string = task._id
   ) =>
     recordHistory({
       workspaceId: project.workspaceId,
       projectId: project._id,
       userId,
-      actorRole: permission.role,
+      actorRole: role,
       action,
       targetType,
       targetId,
@@ -101,70 +92,38 @@ async function loadTask(taskId: string, userId: string) {
       details: { targetTitle: `${task.code} ${task.title}`, ...details },
     });
 
-  return { ok: true as const, task, project, role: permission.role as WorkspaceRole, history };
-}
-
-async function requireSession() {
-  const session = await getServerSession(authOptions);
-  return session?.user?.id ?? null;
+  return { task, project, role, history };
 }
 
 /**
  * Cria uma tarefa no projeto. Qualquer membro do workspace pode criar.
  * O código (PF-12) vem do contador `taskSequence` do projeto, incrementado de forma atômica.
  */
-export async function createTaskAction(
-  input: CreateTaskInput
-): Promise<ActionResult<{ id: string; code: string }>> {
-  try {
-    const userId = await requireSession();
-    if (!userId) return SESSION_EXPIRED;
-
-    const parsed = createTaskSchema.safeParse(input);
-    if (!parsed.success) return invalid(parsed.error);
-
-    const { projectId, title, type, priority, storyPoints, dueDate } = parsed.data;
-
+export const createTaskAction = createAction({
+  name: "task.create",
+  schema: createTaskSchema,
+  handler: async ({ projectId, title, type, priority, storyPoints, dueDate, status: wanted }, { userId }) => {
     await dbConnect();
 
     const project = await Project.findById(projectId)
       .select("workspaceId key statuses")
       .lean<ProjectForTaskLean>();
+    if (!project) fail("Projeto não encontrado.");
 
-    if (!project) {
-      return { success: false, error: "Projeto não encontrado." };
-    }
+    const role = await requireWorkspaceRole(project.workspaceId.toString(), userId, ALL_ROLES);
 
-    const permission = await verifyWorkspacePermission({
-      workspaceId: project.workspaceId.toString(),
-      userId,
-      allowedRoles: ["OWNER", "ADMIN", "MEMBER"],
-    });
-
-    if (!permission.authorized) {
-      return { success: false, error: permission.error };
-    }
-
-    const status = parsed.data.status || project.statuses[0];
+    const status = wanted || project.statuses[0];
     if (!status || !project.statuses.includes(status)) {
-      return {
-        success: false,
-        error: "Status inválido para este projeto.",
-        fieldErrors: { status: ["Escolha um dos status do projeto."] },
-      };
+      fail("Status inválido para este projeto.", { status: ["Escolha um dos status do projeto."] });
     }
 
     // $inc é atômico: duas criações simultâneas nunca recebem o mesmo número
     const counter = await Project.findByIdAndUpdate(projectId, { $inc: { taskSequence: 1 } }, { new: true })
       .select("taskSequence")
       .lean<{ taskSequence: number }>();
-
-    if (!counter) {
-      return { success: false, error: "Projeto não encontrado." };
-    }
+    if (!counter) fail("Projeto não encontrado.");
 
     const code = `${project.key}-${counter.taskSequence}`;
-
     const task = await Task.create({
       projectId,
       reporterId: userId,
@@ -174,14 +133,14 @@ export async function createTaskAction(
       priority,
       status,
       storyPoints: storyPoints ?? null,
-      dueDate: dueDate ? new Date(`${dueDate}T00:00:00.000Z`) : null,
+      dueDate: dueDate ? toDate(dueDate) : null,
     });
 
     await recordHistory({
       workspaceId: project.workspaceId,
       projectId: project._id,
       userId,
-      actorRole: permission.role,
+      actorRole: role,
       action: "CREATE",
       targetType: "TASK",
       targetId: task._id,
@@ -189,51 +148,22 @@ export async function createTaskAction(
     });
 
     revalidateProjectPages();
-
-    return { success: true, data: { id: task._id.toString(), code } };
-  } catch (error) {
-    console.error("[createTaskAction]:", error);
-    return { success: false, error: "Erro interno ao criar a tarefa." };
-  }
-}
-
-/**
- * Move a tarefa para outro status do projeto (outra coluna do quadro)
- * e registra a mudança no histórico. Qualquer membro do workspace pode mover.
- */
-export async function updateTaskStatusAction(
-  input: UpdateTaskStatusInput
-): Promise<ActionResult<{ id: string; status: string }>> {
-  const parsed = updateTaskStatusSchema.safeParse(input);
-  if (!parsed.success) return invalid(parsed.error);
-
-  const result = await updateTaskAction({ taskId: parsed.data.taskId, status: parsed.data.status });
-  return result.success
-    ? { success: true, data: { id: parsed.data.taskId, status: parsed.data.status } }
-    : result;
-}
-
-const dateOnly = (d?: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : null);
+    return { id: task._id.toString(), code };
+  },
+});
 
 /**
  * Edita qualquer campo da tarefa. Só grava o que mudou e registra uma entrada de histórico por campo.
- * Responsável precisa ser membro do workspace; sprint precisa ser do mesmo projeto.
+ * Responsável precisa ser membro do workspace; sprint precisa ser do mesmo projeto e não concluída.
  */
-export async function updateTaskAction(input: UpdateTaskInput): Promise<ActionResult<{ id: string }>> {
-  try {
-    const userId = await requireSession();
-    if (!userId) return SESSION_EXPIRED;
-
-    const parsed = updateTaskSchema.safeParse(input);
-    if (!parsed.success) return invalid(parsed.error);
-    const data = parsed.data;
-
-    const ctx = await loadTask(data.taskId, userId);
-    if (!ctx.ok) return { success: false, error: ctx.error };
-    const { task, project } = ctx;
+export const updateTaskAction = createAction({
+  name: "task.update",
+  schema: updateTaskSchema,
+  handler: async (data, { userId }) => {
+    const { task, project, history } = await loadTask(data.taskId, userId);
 
     const set: Record<string, unknown> = {};
-    const changes: { field: string; oldValue: string | null; newValue: string | null }[] = [];
+    const changes: HistoryDetails[] = [];
     const track = (
       field: string,
       key: string,
@@ -251,27 +181,23 @@ export async function updateTaskAction(input: UpdateTaskInput): Promise<ActionRe
     };
 
     if (data.title !== undefined) track("title", "title", task.title, data.title);
-    if (data.description !== undefined) {
-      // descrição longa: guarda só que mudou, não o texto inteiro, no histórico
-      if ((task.description ?? "") !== data.description) {
-        set.description = data.description;
-        changes.push({ field: "description", oldValue: null, newValue: null });
-      }
+    if (data.description !== undefined && (task.description ?? "") !== data.description) {
+      // descrição longa: o histórico guarda só que ela mudou, não o texto inteiro
+      set.description = data.description;
+      changes.push({ field: "description", oldValue: null, newValue: null });
     }
     if (data.type !== undefined) track("type", "type", task.type, data.type);
     if (data.priority !== undefined) track("priority", "priority", task.priority, data.priority);
     if (data.storyPoints !== undefined)
       track("storyPoints", "storyPoints", task.storyPoints ?? null, data.storyPoints);
     if (data.status !== undefined) {
-      if (!project.statuses.includes(data.status)) {
-        return { success: false, error: "Status inválido para este projeto." };
-      }
+      if (!project.statuses.includes(data.status)) fail("Status inválido para este projeto.");
       track("status", "status", task.status, data.status);
     }
     if (data.dueDate !== undefined) {
       const oldDue = dateOnly(task.dueDate);
       if (oldDue !== data.dueDate) {
-        set.dueDate = data.dueDate ? new Date(`${data.dueDate}T00:00:00.000Z`) : null;
+        set.dueDate = data.dueDate ? toDate(data.dueDate) : null;
         changes.push({ field: "dueDate", oldValue: oldDue, newValue: data.dueDate });
       }
     }
@@ -279,23 +205,20 @@ export async function updateTaskAction(input: UpdateTaskInput): Promise<ActionRe
     if (data.assigneeId !== undefined) {
       const oldId = task.assigneeId?.toString() ?? null;
       if (oldId !== data.assigneeId) {
-        const names = new Map<string, string>();
         if (data.assigneeId) {
           const isMember = await Workspace.exists({
             _id: project.workspaceId,
             "members.userId": data.assigneeId,
           });
-          if (!isMember) return { success: false, error: "O responsável precisa ser membro do workspace." };
+          if (!isMember) fail("O responsável precisa ser membro do workspace.");
         }
         const ids = [oldId, data.assigneeId].filter(Boolean) as string[];
         const people = await User.find({ _id: { $in: ids } })
           .select("username")
           .lean<{ _id: Types.ObjectId; username: string }[]>();
-        people.forEach((p) => names.set(p._id.toString(), p.username));
-        track("assignee", "assigneeId", oldId, data.assigneeId, [
-          oldId ? (names.get(oldId) ?? null) : null,
-          data.assigneeId ? (names.get(data.assigneeId) ?? null) : null,
-        ]);
+        const name = (id: string | null) =>
+          id ? (people.find((p) => p._id.toString() === id)?.username ?? null) : null;
+        track("assignee", "assigneeId", oldId, data.assigneeId, [name(oldId), name(data.assigneeId)]);
       }
     }
 
@@ -307,122 +230,87 @@ export async function updateTaskAction(input: UpdateTaskInput): Promise<ActionRe
           .select("name status")
           .lean<{ _id: Types.ObjectId; name: string; status: string }[]>();
         const target = sprints.find((s) => s._id.toString() === data.sprintId);
-        if (data.sprintId && !target)
-          return { success: false, error: "Sprint não encontrada neste projeto." };
-        if (target?.status === "COMPLETED")
-          return { success: false, error: "Não é possível adicionar tarefas a uma sprint concluída." };
+        if (data.sprintId && !target) fail("Sprint não encontrada neste projeto.");
+        if (target?.status === "COMPLETED") fail("Não é possível adicionar tarefas a uma sprint concluída.");
         const name = (id: string | null) =>
           id ? (sprints.find((s) => s._id.toString() === id)?.name ?? null) : null;
         track("sprint", "sprintId", oldId, data.sprintId, [name(oldId), name(data.sprintId)]);
       }
     }
 
-    if (changes.length === 0) return { success: true, data: { id: data.taskId } };
-
-    await Task.updateOne({ _id: task._id }, { $set: set }, { runValidators: true });
-    await Promise.all(changes.map((c) => ctx.history("MODIFY", "TASK", c)));
-
-    revalidateProjectPages();
-    return { success: true, data: { id: data.taskId } };
-  } catch (error) {
-    console.error("[updateTaskAction]:", error);
-    return { success: false, error: "Erro interno ao salvar a tarefa." };
-  }
-}
-
-/** Exclui a tarefa. Membros comuns só excluem tarefas que eles mesmos criaram. */
-export async function deleteTaskAction(input: { taskId: string }): Promise<ActionResult<{ id: string }>> {
-  try {
-    const userId = await requireSession();
-    if (!userId) return SESSION_EXPIRED;
-
-    const parsed = taskIdSchema.safeParse(input);
-    if (!parsed.success) return invalid(parsed.error);
-
-    const ctx = await loadTask(parsed.data.taskId, userId);
-    if (!ctx.ok) return { success: false, error: ctx.error };
-
-    const reporter = await Task.findById(ctx.task._id)
-      .select("reporterId")
-      .lean<{ reporterId: Types.ObjectId }>();
-    if (ctx.role === "MEMBER" && reporter?.reporterId.toString() !== userId) {
-      return { success: false, error: "Só quem criou a tarefa, um admin ou o dono pode excluí-la." };
+    if (changes.length > 0) {
+      await Task.updateOne({ _id: task._id }, { $set: set }, { runValidators: true });
+      await Promise.all(changes.map((c) => history("MODIFY", "TASK", c)));
+      revalidateProjectPages();
     }
 
-    await Task.deleteOne({ _id: ctx.task._id });
-    await ctx.history("DELETE", "TASK", {});
+    return { id: data.taskId };
+  },
+});
+
+/** Move a tarefa para outra coluna do quadro (atalho de updateTaskAction só com o status). */
+export const updateTaskStatusAction = createAction({
+  name: "task.updateStatus",
+  schema: updateTaskStatusSchema,
+  handler: async ({ taskId, status }) => {
+    const result = await updateTaskAction({ taskId, status });
+    if (!result.success) fail(result.error, result.fieldErrors);
+    return { id: taskId, status };
+  },
+});
+
+/** Exclui a tarefa. Membros comuns só excluem tarefas que eles mesmos criaram. */
+export const deleteTaskAction = createAction({
+  name: "task.delete",
+  schema: taskIdSchema,
+  handler: async ({ taskId }, { userId }) => {
+    const { task, role, history } = await loadTask(taskId, userId);
+    if (role === "MEMBER" && task.reporterId.toString() !== userId) {
+      fail("Só quem criou a tarefa, um admin ou o dono pode excluí-la.");
+    }
+
+    await Task.deleteOne({ _id: task._id });
+    await history("DELETE", "TASK", {});
 
     revalidateProjectPages();
-    return { success: true, data: { id: parsed.data.taskId } };
-  } catch (error) {
-    console.error("[deleteTaskAction]:", error);
-    return { success: false, error: "Erro interno ao excluir a tarefa." };
-  }
-}
+    return { id: taskId };
+  },
+});
 
-export async function addSubtaskAction(input: {
-  taskId: string;
-  title: string;
-}): Promise<ActionResult<{ id: string }>> {
-  try {
-    const userId = await requireSession();
-    if (!userId) return SESSION_EXPIRED;
-
-    const parsed = addSubtaskSchema.safeParse(input);
-    if (!parsed.success) return invalid(parsed.error);
-
-    const ctx = await loadTask(parsed.data.taskId, userId);
-    if (!ctx.ok) return { success: false, error: ctx.error };
+export const addSubtaskAction = createAction({
+  name: "task.addSubtask",
+  schema: addSubtaskSchema,
+  handler: async ({ taskId, title }, { userId }) => {
+    const { task, history } = await loadTask(taskId, userId);
 
     const subtaskId = new Types.ObjectId();
-    const order = ctx.task.subtasks.reduce((max, s) => Math.max(max, s.order), -1) + 1;
+    const order = task.subtasks.reduce((max, s) => Math.max(max, s.order), -1) + 1;
     await Task.updateOne(
-      { _id: ctx.task._id },
-      {
-        $push: {
-          subtasks: {
-            _id: subtaskId,
-            title: parsed.data.title,
-            order,
-            isCompleted: false,
-            generatedByAi: false,
-          },
-        },
-      }
+      { _id: task._id },
+      { $push: { subtasks: { _id: subtaskId, title, order, isCompleted: false, generatedByAi: false } } }
     );
-    await ctx.history("CREATE", "SUBTASK", { field: "subtask", newValue: parsed.data.title }, subtaskId);
+    await history("CREATE", "SUBTASK", { field: "subtask", newValue: title }, subtaskId);
 
     revalidateProjectPages();
-    return { success: true, data: { id: subtaskId.toString() } };
-  } catch (error) {
-    console.error("[addSubtaskAction]:", error);
-    return { success: false, error: "Erro interno ao adicionar a subtarefa." };
-  }
-}
+    return { id: subtaskId.toString() };
+  },
+});
 
-export async function toggleSubtaskAction(input: {
-  taskId: string;
-  subtaskId: string;
-}): Promise<ActionResult<{ isCompleted: boolean }>> {
-  try {
-    const userId = await requireSession();
-    if (!userId) return SESSION_EXPIRED;
+export const toggleSubtaskAction = createAction({
+  name: "task.toggleSubtask",
+  schema: subtaskRefSchema,
+  handler: async ({ taskId, subtaskId }, { userId }) => {
+    const { task, history } = await loadTask(taskId, userId);
 
-    const parsed = subtaskRefSchema.safeParse(input);
-    if (!parsed.success) return invalid(parsed.error);
-
-    const ctx = await loadTask(parsed.data.taskId, userId);
-    if (!ctx.ok) return { success: false, error: ctx.error };
-
-    const subtask = ctx.task.subtasks.find((s) => s._id.toString() === parsed.data.subtaskId);
-    if (!subtask) return { success: false, error: "Subtarefa não encontrada." };
+    const subtask = task.subtasks.find((s) => s._id.toString() === subtaskId);
+    if (!subtask) fail("Subtarefa não encontrada.");
 
     const isCompleted = !subtask.isCompleted;
     await Task.updateOne(
-      { _id: ctx.task._id, "subtasks._id": subtask._id },
+      { _id: task._id, "subtasks._id": subtask._id },
       { $set: { "subtasks.$.isCompleted": isCompleted } }
     );
-    await ctx.history(
+    await history(
       "MODIFY",
       "SUBTASK",
       { field: "subtask", oldValue: subtask.title, newValue: isCompleted ? "concluída" : "reaberta" },
@@ -430,102 +318,62 @@ export async function toggleSubtaskAction(input: {
     );
 
     revalidateProjectPages();
-    return { success: true, data: { isCompleted } };
-  } catch (error) {
-    console.error("[toggleSubtaskAction]:", error);
-    return { success: false, error: "Erro interno ao atualizar a subtarefa." };
-  }
-}
+    return { isCompleted };
+  },
+});
 
-export async function deleteSubtaskAction(input: {
-  taskId: string;
-  subtaskId: string;
-}): Promise<ActionResult<{ id: string }>> {
-  try {
-    const userId = await requireSession();
-    if (!userId) return SESSION_EXPIRED;
+export const deleteSubtaskAction = createAction({
+  name: "task.deleteSubtask",
+  schema: subtaskRefSchema,
+  handler: async ({ taskId, subtaskId }, { userId }) => {
+    const { task, history } = await loadTask(taskId, userId);
 
-    const parsed = subtaskRefSchema.safeParse(input);
-    if (!parsed.success) return invalid(parsed.error);
+    const subtask = task.subtasks.find((s) => s._id.toString() === subtaskId);
+    if (!subtask) fail("Subtarefa não encontrada.");
 
-    const ctx = await loadTask(parsed.data.taskId, userId);
-    if (!ctx.ok) return { success: false, error: ctx.error };
-
-    const subtask = ctx.task.subtasks.find((s) => s._id.toString() === parsed.data.subtaskId);
-    if (!subtask) return { success: false, error: "Subtarefa não encontrada." };
-
-    await Task.updateOne({ _id: ctx.task._id }, { $pull: { subtasks: { _id: subtask._id } } });
-    await ctx.history("DELETE", "SUBTASK", { field: "subtask", oldValue: subtask.title }, subtask._id);
+    await Task.updateOne({ _id: task._id }, { $pull: { subtasks: { _id: subtask._id } } });
+    await history("DELETE", "SUBTASK", { field: "subtask", oldValue: subtask.title }, subtask._id);
 
     revalidateProjectPages();
-    return { success: true, data: { id: parsed.data.subtaskId } };
-  } catch (error) {
-    console.error("[deleteSubtaskAction]:", error);
-    return { success: false, error: "Erro interno ao excluir a subtarefa." };
-  }
-}
+    return { id: subtaskId };
+  },
+});
 
-export async function addCommentAction(input: {
-  taskId: string;
-  content: string;
-}): Promise<ActionResult<{ id: string }>> {
-  try {
-    const userId = await requireSession();
-    if (!userId) return SESSION_EXPIRED;
-
-    const parsed = addCommentSchema.safeParse(input);
-    if (!parsed.success) return invalid(parsed.error);
-
-    const ctx = await loadTask(parsed.data.taskId, userId);
-    if (!ctx.ok) return { success: false, error: ctx.error };
+export const addCommentAction = createAction({
+  name: "task.addComment",
+  schema: addCommentSchema,
+  handler: async ({ taskId, content }, { userId }) => {
+    const { task, history } = await loadTask(taskId, userId);
 
     const commentId = new Types.ObjectId();
     await Task.updateOne(
-      { _id: ctx.task._id },
-      {
-        $push: {
-          comments: { _id: commentId, authorId: userId, content: parsed.data.content, createdAt: new Date() },
-        },
-      }
+      { _id: task._id },
+      { $push: { comments: { _id: commentId, authorId: userId, content, createdAt: new Date() } } }
     );
-    await ctx.history("CREATE", "COMMENT", {}, commentId);
+    await history("CREATE", "COMMENT", {}, commentId);
 
     revalidateProjectPages();
-    return { success: true, data: { id: commentId.toString() } };
-  } catch (error) {
-    console.error("[addCommentAction]:", error);
-    return { success: false, error: "Erro interno ao comentar." };
-  }
-}
+    return { id: commentId.toString() };
+  },
+});
 
 /** Exclui um comentário: o autor, um admin ou o dono do workspace. */
-export async function deleteCommentAction(input: {
-  taskId: string;
-  commentId: string;
-}): Promise<ActionResult<{ id: string }>> {
-  try {
-    const userId = await requireSession();
-    if (!userId) return SESSION_EXPIRED;
+export const deleteCommentAction = createAction({
+  name: "task.deleteComment",
+  schema: commentRefSchema,
+  handler: async ({ taskId, commentId }, { userId }) => {
+    const { task, role, history } = await loadTask(taskId, userId);
 
-    const parsed = commentRefSchema.safeParse(input);
-    if (!parsed.success) return invalid(parsed.error);
-
-    const ctx = await loadTask(parsed.data.taskId, userId);
-    if (!ctx.ok) return { success: false, error: ctx.error };
-
-    const comment = ctx.task.comments.find((c) => c._id.toString() === parsed.data.commentId);
-    if (!comment) return { success: false, error: "Comentário não encontrado." };
-    if (ctx.role === "MEMBER" && comment.authorId.toString() !== userId) {
-      return { success: false, error: "Você só pode excluir os seus comentários." };
+    const comment = task.comments.find((c) => c._id.toString() === commentId);
+    if (!comment) fail("Comentário não encontrado.");
+    if (role === "MEMBER" && comment.authorId.toString() !== userId) {
+      fail("Você só pode excluir os seus comentários.");
     }
 
-    await Task.updateOne({ _id: ctx.task._id }, { $pull: { comments: { _id: comment._id } } });
-    await ctx.history("DELETE", "COMMENT", {}, comment._id);
+    await Task.updateOne({ _id: task._id }, { $pull: { comments: { _id: comment._id } } });
+    await history("DELETE", "COMMENT", {}, comment._id);
 
     revalidateProjectPages();
-    return { success: true, data: { id: parsed.data.commentId } };
-  } catch (error) {
-    console.error("[deleteCommentAction]:", error);
-    return { success: false, error: "Erro interno ao excluir o comentário." };
-  }
-}
+    return { id: commentId };
+  },
+});

@@ -1,64 +1,41 @@
 "use server";
 
-import { ActionResult } from "@/types";
-import { SignUpInput, signUpSchema } from "../schemas";
+import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/db";
 import { User } from "../db/models";
-import bcrypt from "bcryptjs";
-import { z } from "zod";
+import { createAction, fail } from "../lib/action";
+import { signUpSchema } from "../schemas";
 
-export async function signUpAction(input: SignUpInput): Promise<ActionResult<{ id: string; email: string }>> {
-  try {
-    const parsed = signUpSchema.safeParse(input);
-    if (!parsed.success) {
-      return {
-        success: false,
-        error: "Dados de cadastro inválidos.",
-        fieldErrors: z.flattenError(parsed.error).fieldErrors,
-      };
-    }
+const isDuplicateKey = (error: unknown) =>
+  typeof error === "object" && error !== null && (error as { code?: number }).code === 11000;
 
-    const { username, email, password } = parsed.data;
-
+export const signUpAction = createAction({
+  name: "auth.signUp",
+  schema: signUpSchema,
+  public: true,
+  handler: async ({ username, email, password }) => {
     await dbConnect();
 
-    const existingUser = await User.findOne({ email }).select("+passwordHash").lean();
+    const existingUser = await User.findOne({ email })
+      .select("+passwordHash")
+      .lean<{ passwordHash?: string | null }>();
 
     if (existingUser) {
-      // caso o usuário já tenha entrado antes usando Google ou GitHub com esse e-mail
-      if (!existingUser.passwordHash) {
-        return {
-          success: false,
-          error: "Este e-mail já está vinculado a uma conta Google ou GitHub.",
-        };
-      }
-
-      return {
-        success: false,
-        error: "Este e-mail já está cadastrado.",
-      };
+      // a pessoa já entrou antes com Google ou GitHub usando esse e-mail
+      if (!existingUser.passwordHash) fail("Este e-mail já está vinculado a uma conta Google ou GitHub.");
+      fail("Este e-mail já está cadastrado.", { email: ["Este e-mail já está cadastrado."] });
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    const newUser = await User.create({
-      username,
-      email,
-      passwordHash,
-    });
-
-    return {
-      success: true,
-      data: {
-        id: newUser._id.toString(),
-        email: newUser.email,
-      },
-    };
-  } catch (error) {
-    console.error("[signUpAction]:", error);
-    return {
-      success: false,
-      error: "Erro interno ao criar conta.",
-    };
-  }
-}
+    try {
+      const newUser = await User.create({ username, email, passwordHash });
+      return { id: newUser._id.toString(), email: newUser.email };
+    } catch (error) {
+      // dois cadastros simultâneos com o mesmo e-mail: o índice único segura o segundo
+      if (isDuplicateKey(error))
+        fail("Este e-mail já está cadastrado.", { email: ["Este e-mail já está cadastrado."] });
+      throw error;
+    }
+  },
+});

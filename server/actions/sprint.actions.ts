@@ -1,17 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getServerSession } from "next-auth";
-import { Types } from "mongoose";
-import { z } from "zod";
-
-import { authOptions } from "@/lib/auth";
+import mongoose, { Types } from "mongoose";
 import dbConnect from "@/lib/db";
-import { ActionResult } from "@/types";
 import { Project, Sprint, Task } from "../db/models";
-import { verifyWorkspacePermission } from "../services/permission.service";
+import { createAction, fail } from "../lib/action";
+import { MANAGERS, requireWorkspaceRole } from "../lib/access";
 import { recordHistory } from "../services/history.service";
-import { completeSprintSchema, CreateSprintInput, createSprintSchema, sprintIdSchema } from "../schemas";
+import { completeSprintSchema, createSprintSchema, sprintIdSchema } from "../schemas";
 
 interface ProjectLean {
   _id: Types.ObjectId;
@@ -28,14 +24,6 @@ interface SprintLean {
   endDate?: Date | null;
 }
 
-function invalid(error: z.ZodError) {
-  return {
-    success: false as const,
-    error: "Dados inválidos.",
-    fieldErrors: z.flattenError(error).fieldErrors,
-  };
-}
-
 function revalidateProjectPages() {
   revalidatePath("/w/[workspaceSlug]/projects/[projectKey]", "layout");
 }
@@ -43,207 +31,144 @@ function revalidateProjectPages() {
 const toDate = (d?: string | null) => (d ? new Date(`${d}T00:00:00.000Z`) : null);
 
 /** Planejar, iniciar e concluir sprints é decisão de dono ou admin. */
-async function authorize(projectId: Types.ObjectId | string, userId: string) {
+async function loadProject(projectId: Types.ObjectId | string, userId: string) {
+  await dbConnect();
   const project = await Project.findById(projectId).select("workspaceId statuses").lean<ProjectLean>();
-  if (!project) return { ok: false as const, error: "Projeto não encontrado." };
+  if (!project) fail("Projeto não encontrado.");
+  const role = await requireWorkspaceRole(project.workspaceId.toString(), userId, MANAGERS);
 
-  const permission = await verifyWorkspacePermission({
-    workspaceId: project.workspaceId.toString(),
-    userId,
-    allowedRoles: ["OWNER", "ADMIN"],
-  });
-  if (!permission.authorized) return { ok: false as const, error: permission.error };
-
-  return { ok: true as const, project, role: permission.role };
-}
-
-export async function createSprintAction(input: CreateSprintInput): Promise<ActionResult<{ id: string }>> {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return { success: false, error: "Sessão expirada. Faça login novamente." };
-
-    const parsed = createSprintSchema.safeParse(input);
-    if (!parsed.success) return invalid(parsed.error);
-
-    await dbConnect();
-    const auth = await authorize(parsed.data.projectId, session.user.id);
-    if (!auth.ok) return { success: false, error: auth.error };
-
-    const sprint = await Sprint.create({
-      projectId: parsed.data.projectId,
-      name: parsed.data.name,
-      goal: parsed.data.goal ?? "",
-      startDate: toDate(parsed.data.startDate),
-      endDate: toDate(parsed.data.endDate),
-      status: "PLANNED",
-    });
-
-    await recordHistory({
-      workspaceId: auth.project.workspaceId,
-      projectId: auth.project._id,
-      userId: session.user.id,
-      actorRole: auth.role,
-      action: "CREATE",
+  const history = (
+    action: "CREATE" | "MODIFY" | "DELETE",
+    sprint: { _id: Types.ObjectId; name: string },
+    change?: { oldValue: string; newValue: string }
+  ) =>
+    recordHistory({
+      workspaceId: project.workspaceId,
+      projectId: project._id,
+      userId,
+      actorRole: role,
+      action,
       targetType: "SPRINT",
       targetId: sprint._id,
-      details: { targetTitle: sprint.name },
+      details: change
+        ? { targetTitle: sprint.name, field: "status", ...change }
+        : { targetTitle: sprint.name },
     });
 
-    revalidateProjectPages();
-    return { success: true, data: { id: sprint._id.toString() } };
-  } catch (error) {
-    console.error("[createSprintAction]:", error);
-    return { success: false, error: "Erro interno ao criar a sprint." };
-  }
+  return { project, history };
 }
 
+async function loadSprint(sprintId: string, userId: string) {
+  await dbConnect();
+  const sprint = await Sprint.findById(sprintId).lean<SprintLean>();
+  if (!sprint) fail("Sprint não encontrada.");
+  return { sprint, ...(await loadProject(sprint.projectId, userId)) };
+}
+
+export const createSprintAction = createAction({
+  name: "sprint.create",
+  schema: createSprintSchema,
+  handler: async ({ projectId, name, goal, startDate, endDate }, { userId }) => {
+    const { history } = await loadProject(projectId, userId);
+
+    const sprint = await Sprint.create({
+      projectId,
+      name,
+      goal: goal ?? "",
+      startDate: toDate(startDate),
+      endDate: toDate(endDate),
+      status: "PLANNED",
+    });
+    await history("CREATE", sprint);
+
+    revalidateProjectPages();
+    return { id: sprint._id.toString() };
+  },
+});
+
 /** Inicia uma sprint planejada. Só uma sprint pode estar ativa por projeto. */
-export async function startSprintAction(input: { sprintId: string }): Promise<ActionResult<{ id: string }>> {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return { success: false, error: "Sessão expirada. Faça login novamente." };
-
-    const parsed = sprintIdSchema.safeParse(input);
-    if (!parsed.success) return invalid(parsed.error);
-
-    await dbConnect();
-    const sprint = await Sprint.findById(parsed.data.sprintId).lean<SprintLean>();
-    if (!sprint) return { success: false, error: "Sprint não encontrada." };
-    if (sprint.status !== "PLANNED")
-      return { success: false, error: "Só uma sprint planejada pode ser iniciada." };
-
-    const auth = await authorize(sprint.projectId, session.user.id);
-    if (!auth.ok) return { success: false, error: auth.error };
+export const startSprintAction = createAction({
+  name: "sprint.start",
+  schema: sprintIdSchema,
+  handler: async ({ sprintId }, { userId }) => {
+    const { sprint, history } = await loadSprint(sprintId, userId);
+    if (sprint.status !== "PLANNED") fail("Só uma sprint planejada pode ser iniciada.");
 
     const active = await Sprint.exists({ projectId: sprint.projectId, status: "ACTIVE" });
-    if (active)
-      return { success: false, error: "Já existe uma sprint ativa. Conclua ela antes de iniciar outra." };
+    if (active) fail("Já existe uma sprint ativa. Conclua ela antes de iniciar outra.");
 
     await Sprint.updateOne(
       { _id: sprint._id },
       { $set: { status: "ACTIVE", startDate: sprint.startDate ?? new Date() } }
     );
-
-    await recordHistory({
-      workspaceId: auth.project.workspaceId,
-      projectId: auth.project._id,
-      userId: session.user.id,
-      actorRole: auth.role,
-      action: "MODIFY",
-      targetType: "SPRINT",
-      targetId: sprint._id,
-      details: { targetTitle: sprint.name, field: "status", oldValue: "PLANNED", newValue: "ACTIVE" },
-    });
+    await history("MODIFY", sprint, { oldValue: "PLANNED", newValue: "ACTIVE" });
 
     revalidateProjectPages();
-    return { success: true, data: { id: parsed.data.sprintId } };
-  } catch (error) {
-    console.error("[startSprintAction]:", error);
-    return { success: false, error: "Erro interno ao iniciar a sprint." };
-  }
-}
+    return { id: sprintId };
+  },
+});
 
 /**
  * Conclui a sprint ativa. Tarefas que não estão no último status do projeto (ex.: "Concluído")
- * vão para outra sprint planejada ou de volta ao backlog.
+ * vão para outra sprint planejada ou de volta ao backlog, na mesma transação que fecha a sprint.
  */
-export async function completeSprintAction(input: {
-  sprintId: string;
-  moveToSprintId: string | null;
-}): Promise<ActionResult<{ moved: number }>> {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return { success: false, error: "Sessão expirada. Faça login novamente." };
-
-    const parsed = completeSprintSchema.safeParse(input);
-    if (!parsed.success) return invalid(parsed.error);
-    const { sprintId, moveToSprintId } = parsed.data;
-
-    await dbConnect();
-    const sprint = await Sprint.findById(sprintId).lean<SprintLean>();
-    if (!sprint) return { success: false, error: "Sprint não encontrada." };
-    if (sprint.status !== "ACTIVE") return { success: false, error: "Só a sprint ativa pode ser concluída." };
-
-    const auth = await authorize(sprint.projectId, session.user.id);
-    if (!auth.ok) return { success: false, error: auth.error };
+export const completeSprintAction = createAction({
+  name: "sprint.complete",
+  schema: completeSprintSchema,
+  handler: async ({ sprintId, moveToSprintId }, { userId }) => {
+    const { sprint, project, history } = await loadSprint(sprintId, userId);
+    if (sprint.status !== "ACTIVE") fail("Só a sprint ativa pode ser concluída.");
 
     if (moveToSprintId) {
-      const target = await Sprint.findOne({
+      const target = await Sprint.exists({
         _id: moveToSprintId,
         projectId: sprint.projectId,
         status: "PLANNED",
-      })
-        .select("_id")
-        .lean();
-      if (!target) return { success: false, error: "Escolha uma sprint planejada deste projeto." };
+      });
+      if (!target) fail("Escolha uma sprint planejada deste projeto.");
     }
 
-    const doneStatus = auth.project.statuses[auth.project.statuses.length - 1];
-    const moved = await Task.updateMany(
-      { sprintId: sprint._id, status: { $ne: doneStatus } },
-      { $set: { sprintId: moveToSprintId ?? null } }
-    );
+    const doneStatus = project.statuses.at(-1);
+    let moved = 0;
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        const result = await Task.updateMany(
+          { sprintId: sprint._id, status: { $ne: doneStatus } },
+          { $set: { sprintId: moveToSprintId ?? null } },
+          { session }
+        );
+        moved = result.modifiedCount;
+        await Sprint.updateOne(
+          { _id: sprint._id },
+          { $set: { status: "COMPLETED", endDate: sprint.endDate ?? new Date() } },
+          { session }
+        );
+      });
+    } finally {
+      await session.endSession();
+    }
 
-    await Sprint.updateOne(
-      { _id: sprint._id },
-      { $set: { status: "COMPLETED", endDate: sprint.endDate ?? new Date() } }
-    );
-
-    await recordHistory({
-      workspaceId: auth.project.workspaceId,
-      projectId: auth.project._id,
-      userId: session.user.id,
-      actorRole: auth.role,
-      action: "MODIFY",
-      targetType: "SPRINT",
-      targetId: sprint._id,
-      details: { targetTitle: sprint.name, field: "status", oldValue: "ACTIVE", newValue: "COMPLETED" },
-    });
+    await history("MODIFY", sprint, { oldValue: "ACTIVE", newValue: "COMPLETED" });
 
     revalidateProjectPages();
-    return { success: true, data: { moved: moved.modifiedCount } };
-  } catch (error) {
-    console.error("[completeSprintAction]:", error);
-    return { success: false, error: "Erro interno ao concluir a sprint." };
-  }
-}
+    return { moved };
+  },
+});
 
 /** Exclui uma sprint que ainda não começou; as tarefas dela voltam para o backlog. */
-export async function deleteSprintAction(input: { sprintId: string }): Promise<ActionResult<{ id: string }>> {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return { success: false, error: "Sessão expirada. Faça login novamente." };
-
-    const parsed = sprintIdSchema.safeParse(input);
-    if (!parsed.success) return invalid(parsed.error);
-
-    await dbConnect();
-    const sprint = await Sprint.findById(parsed.data.sprintId).lean<SprintLean>();
-    if (!sprint) return { success: false, error: "Sprint não encontrada." };
-    if (sprint.status !== "PLANNED")
-      return { success: false, error: "Só sprints planejadas podem ser excluídas." };
-
-    const auth = await authorize(sprint.projectId, session.user.id);
-    if (!auth.ok) return { success: false, error: auth.error };
+export const deleteSprintAction = createAction({
+  name: "sprint.delete",
+  schema: sprintIdSchema,
+  handler: async ({ sprintId }, { userId }) => {
+    const { sprint, history } = await loadSprint(sprintId, userId);
+    if (sprint.status !== "PLANNED") fail("Só sprints planejadas podem ser excluídas.");
 
     await Task.updateMany({ sprintId: sprint._id }, { $set: { sprintId: null } });
     await Sprint.deleteOne({ _id: sprint._id });
-
-    await recordHistory({
-      workspaceId: auth.project.workspaceId,
-      projectId: auth.project._id,
-      userId: session.user.id,
-      actorRole: auth.role,
-      action: "DELETE",
-      targetType: "SPRINT",
-      targetId: sprint._id,
-      details: { targetTitle: sprint.name },
-    });
+    await history("DELETE", sprint);
 
     revalidateProjectPages();
-    return { success: true, data: { id: parsed.data.sprintId } };
-  } catch (error) {
-    console.error("[deleteSprintAction]:", error);
-    return { success: false, error: "Erro interno ao excluir a sprint." };
-  }
-}
+    return { id: sprintId };
+  },
+});

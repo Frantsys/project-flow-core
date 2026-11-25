@@ -1,69 +1,65 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getServerSession } from "next-auth";
-
-import { verifyWorkspacePermission } from "@/server/services/permission.service";
-import { recordHistory } from "@/server/services/history.service";
-import {
-  CreateProjectInput,
-  createProjectSchema,
-  DeleteProjectInput,
-  deleteProjectSchema,
-  UpdateProjectInput,
-  updateProjectSchema,
-} from "../schemas";
-import { ActionResult } from "@/types";
-import { authOptions } from "@/lib/auth";
+import mongoose, { Types } from "mongoose";
 import dbConnect from "@/lib/db";
 import { ChangeHistory, DocumentModel, Project, Sprint, Task } from "../db/models";
-import { z } from "zod";
-import mongoose, { Types } from "mongoose";
+import { createAction, fail } from "../lib/action";
+import { MANAGERS, requireWorkspaceRole } from "../lib/access";
+import { recordHistory } from "../services/history.service";
+import { createProjectSchema, deleteProjectSchema, updateProjectSchema } from "../schemas";
 
-export async function createProjectAction(
-  input: CreateProjectInput
-): Promise<ActionResult<{ id: string; name: string; key: string }>> {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return { success: false, error: "Sessão expirada. Faça login novamente." };
-    }
+interface ProjectLean {
+  _id: Types.ObjectId;
+  workspaceId: Types.ObjectId;
+  key: string;
+  name: string;
+  description?: string | null;
+}
 
-    const parsed = createProjectSchema.safeParse(input);
-    if (!parsed.success) {
-      return {
-        success: false,
-        error: "Dados inválidos.",
-        fieldErrors: z.flattenError(parsed.error).fieldErrors,
-      };
-    }
+interface IdOnlyLean {
+  _id: Types.ObjectId;
+}
 
-    const { workspaceId, name, key, description } = parsed.data;
+const isDuplicateKey = (error: unknown) =>
+  typeof error === "object" && error !== null && (error as { code?: number }).code === 11000;
 
-    const permission = await verifyWorkspacePermission({
-      workspaceId,
-      userId: session.user.id,
-      allowedRoles: ["OWNER", "ADMIN"],
-    });
+/** Projeto existente + papel do usuário (só dono e admin mexem na estrutura do projeto). */
+async function loadProjectForManager(projectId: string, userId: string) {
+  await dbConnect();
+  const project = await Project.findById(projectId)
+    .select("workspaceId key name description")
+    .lean<ProjectLean>();
+  if (!project) fail("Projeto não encontrado.");
 
-    if (!permission.authorized) {
-      return { success: false, error: permission.error };
-    }
+  const role = await requireWorkspaceRole(project.workspaceId.toString(), userId, MANAGERS);
+  return { project, role };
+}
 
+export const createProjectAction = createAction({
+  name: "project.create",
+  schema: createProjectSchema,
+  handler: async ({ workspaceId, name, key, description }, { userId }) => {
+    const role = await requireWorkspaceRole(workspaceId, userId, MANAGERS);
     await dbConnect();
 
-    const project = await Project.create({
-      workspaceId,
-      name,
-      key,
-      ...(description ? { description } : {}),
-    });
+    let project;
+    try {
+      project = await Project.create({ workspaceId, name, key, ...(description ? { description } : {}) });
+    } catch (error) {
+      if (isDuplicateKey(error)) {
+        fail("Já existe um projeto com essa chave neste workspace.", {
+          key: ["Esta chave já está em uso neste workspace."],
+        });
+      }
+      throw error;
+    }
 
     await recordHistory({
       workspaceId,
       projectId: project._id,
-      userId: session.user.id,
-      actorRole: permission.role,
+      userId,
+      actorRole: role,
       action: "CREATE",
       targetType: "PROJECT",
       targetId: project._id,
@@ -71,273 +67,102 @@ export async function createProjectAction(
     });
 
     revalidatePath("/", "layout");
+    return { id: project._id.toString(), name: project.name, key: project.key };
+  },
+});
 
-    return {
-      success: true,
-      data: {
-        id: project._id.toString(),
-        name: project.name,
-        key: project.key,
-      },
-    };
-  } catch (error) {
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      (error as { code: number }).code === 11000
-    ) {
-      return {
-        success: false,
-        error: "Já existe um projeto com essa chave neste workspace.",
-        fieldErrors: {
-          key: ["Esta chave já está em uso neste workspace."],
-        },
-      };
-    }
+export const updateProjectAction = createAction({
+  name: "project.update",
+  schema: updateProjectSchema,
+  handler: async ({ projectId, name, description }, { userId }) => {
+    const { project, role } = await loadProjectForManager(projectId, userId);
 
-    console.error("[createProjectAction]:", error);
-    return {
-      success: false,
-      error: "Erro interno ao criar o projeto.",
-    };
-  }
-}
-
-interface UpdatedProjectLean {
-  _id: Types.ObjectId;
-  name: string;
-  key: string;
-  description?: string | null;
-}
-
-export async function updateProjectAction(input: UpdateProjectInput): Promise<
-  ActionResult<{
-    id: string;
-    name: string;
-    key: string;
-    description: string | null;
-  }>
-> {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return { success: false, error: "Sessão expirada. Faça login novamente." };
-    }
-
-    const parsed = updateProjectSchema.safeParse(input);
-    if (!parsed.success) {
-      return {
-        success: false,
-        error: "Dados inválidos.",
-        fieldErrors: z.flattenError(parsed.error).fieldErrors,
-      };
-    }
-
-    const { projectId, name, description } = parsed.data;
-
-    await dbConnect();
-
-    const existingProject = await Project.findById(projectId)
-      .select("workspaceId key name")
-      .lean<{ _id: Types.ObjectId; workspaceId: Types.ObjectId; key: string; name: string }>();
-
-    if (!existingProject) {
-      return { success: false, error: "Projeto não encontrado." };
-    }
-
-    const permission = await verifyWorkspacePermission({
-      workspaceId: existingProject.workspaceId.toString(),
-      userId: session.user.id,
-      allowedRoles: ["OWNER", "ADMIN"],
-    });
-
-    if (!permission.authorized) {
-      return { success: false, error: permission.error };
-    }
-
-    const updateData: { name?: string; description?: string | null } = {};
-
-    if (name !== undefined) {
-      updateData.name = name;
-    }
-
-    if (description !== undefined) {
-      updateData.description = description || null;
-    }
+    const set: { name?: string; description?: string | null } = {};
+    if (name !== undefined) set.name = name;
+    if (description !== undefined) set.description = description || null;
 
     const updated = await Project.findByIdAndUpdate(
       projectId,
-      { $set: updateData },
+      { $set: set },
       { new: true, runValidators: true }
     )
       .select("_id name key description")
-      .lean<UpdatedProjectLean>();
+      .lean<ProjectLean>();
+    if (!updated) fail("Projeto não encontrado.");
 
-    if (!updated) {
-      return { success: false, error: "Erro ao localizar o projeto atualizado." };
-    }
-
+    const targetTitle = `${updated.key} · ${updated.name}`;
     await recordHistory({
-      workspaceId: existingProject.workspaceId,
-      projectId: existingProject._id,
-      userId: session.user.id,
-      actorRole: permission.role,
+      workspaceId: project.workspaceId,
+      projectId: project._id,
+      userId,
+      actorRole: role,
       action: "MODIFY",
       targetType: "PROJECT",
-      targetId: existingProject._id,
+      targetId: project._id,
       details:
-        name !== undefined && name !== existingProject.name
-          ? {
-              targetTitle: `${updated.key} · ${updated.name}`,
-              field: "name",
-              oldValue: existingProject.name,
-              newValue: updated.name,
-            }
-          : { targetTitle: `${updated.key} · ${updated.name}` },
+        name !== undefined && name !== project.name
+          ? { targetTitle, field: "name", oldValue: project.name, newValue: updated.name }
+          : { targetTitle },
     });
 
     revalidatePath("/", "layout");
-
     return {
-      success: true,
-      data: {
-        id: updated._id.toString(),
-        name: updated.name,
-        key: updated.key,
-        description: updated.description ?? null,
-      },
+      id: updated._id.toString(),
+      name: updated.name,
+      key: updated.key,
+      description: updated.description ?? null,
     };
-  } catch (error) {
-    console.error("[updateProjectAction]:", error);
-    return {
-      success: false,
-      error: "Erro interno ao atualizar o projeto.",
-    };
-  }
-}
-
-// interface essencial para que apenas o Id seja retornado em uma projeção .lean()
-interface IdOnlyLean {
-  _id: Types.ObjectId;
-}
+  },
+});
 
 /**
- *  Action para excluir um projeto
- *  como essa entidade possui muitas chaves estrangeiras, e o mongodb não possui
- *  estratégia de exclusão em cascata, algumas medidas devem ser tomadas
+ * Exclui o projeto e tudo que pertence a ele (tarefas, sprints, documentos e o histórico deles)
+ * numa transação: o Mongo não tem exclusão em cascata.
  */
+export const deleteProjectAction = createAction({
+  name: "project.delete",
+  schema: deleteProjectSchema,
+  handler: async ({ projectId }, { userId }) => {
+    const { project, role } = await loadProjectForManager(projectId, userId);
 
-export async function deleteProjectAction(input: DeleteProjectInput): Promise<ActionResult<{ id: string }>> {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return { success: false, error: "Sessão expirada. Faça login novamente." };
-    }
-
-    const parsed = deleteProjectSchema.safeParse(input);
-    if (!parsed.success) {
-      return {
-        success: false,
-        error: "Dados inválidos.",
-        fieldErrors: z.flattenError(parsed.error).fieldErrors,
-      };
-    }
-
-    const { projectId } = parsed.data;
-
-    await dbConnect();
-
-    // encontra o projeto pelo seu id e retorna também o id do workspace para validar
-    // permissões do membro
-    const existingProject = await Project.findById(projectId)
-      .select("workspaceId key name")
-      .lean<{ _id: Types.ObjectId; workspaceId: Types.ObjectId; key: string; name: string }>();
-
-    if (!existingProject) {
-      return { success: false, error: "Projeto não encontrado." };
-    }
-
-    // apenas OWNER ou ADMIN do workspace podem excluir o projeto
-    const permission = await verifyWorkspacePermission({
-      workspaceId: existingProject.workspaceId.toString(),
-      userId: session.user.id,
-      allowedRoles: ["OWNER", "ADMIN"],
-    });
-
-    if (!permission.authorized) {
-      return { success: false, error: permission.error };
-    }
-
-    // coleta IDs dos filhos para limpar também o histórico polimórfico associado a eles
-    // uso de Promise.all([]) para execução de múltiplos processos assícronos ao mesmo tempo
-    // resulta em melhor performance
     const [tasks, sprints, documents] = await Promise.all([
       Task.find({ projectId }).select("_id").lean<IdOnlyLean[]>(),
       Sprint.find({ projectId }).select("_id").lean<IdOnlyLean[]>(),
       DocumentModel.find({ projectId }).select("_id").lean<IdOnlyLean[]>(),
     ]);
+    const relatedIds = [project._id, ...tasks, ...sprints, ...documents].map((d) =>
+      d instanceof Types.ObjectId ? d : d._id
+    );
 
-    const relatedTargetIds: Types.ObjectId[] = [
-      existingProject._id,
-      ...tasks.map((t) => t._id),
-      ...sprints.map((s) => s._id),
-      ...documents.map((d) => d._id),
-    ];
-
-    // simulação de CASCADE
-    // remove todos os registros de entidades associadas ao projeto
-
-    // para fins de atomicidade, usa-se uma sessão mongo para iniciar uma transação
-    // Benefícios: possui as características de uma transação SQL, sendo atômica e possuindo Rollback
-    // Trade-Offs: aumenta considerávelmente a latência, mas para operações de importância
-    // considerável e incomuns, acaba por ser o ideal.
-    const mongosession = await mongoose.startSession();
-
+    const session = await mongoose.startSession();
     try {
-      await mongosession.withTransaction(async () => {
-        // a opção do mongoose se chama `session`; com outro nome as operações rodavam fora da transação
-        await Task.deleteMany({ projectId }, { session: mongosession });
-
-        await Sprint.deleteMany({ projectId }, { session: mongosession });
-        await DocumentModel.deleteMany({ projectId }, { session: mongosession });
-
+      await session.withTransaction(async () => {
+        await Task.deleteMany({ projectId }, { session });
+        await Sprint.deleteMany({ projectId }, { session });
+        await DocumentModel.deleteMany({ projectId }, { session });
         await ChangeHistory.deleteMany(
-          {
-            $or: [{ parentId: existingProject._id }, { targetId: { $in: relatedTargetIds } }],
-          },
-          { session: mongosession }
+          { $or: [{ parentId: project._id }, { targetId: { $in: relatedIds } }] },
+          { session }
         );
-
-        await Project.findByIdAndDelete(projectId, { session: mongosession });
+        await Project.deleteOne({ _id: projectId }, { session });
       });
     } finally {
-      await mongosession.endSession();
+      await session.endSession();
     }
 
-    // registrado depois da transação (que apaga o histórico do projeto) e sem projectId, para ficar no feed do workspace
+    // depois da transação (que apaga o histórico do projeto) e sem projectId: fica no feed do workspace
     await recordHistory({
-      workspaceId: existingProject.workspaceId,
+      workspaceId: project.workspaceId,
       projectId: null,
-      userId: session.user.id,
-      actorRole: permission.role,
+      userId,
+      actorRole: role,
       action: "DELETE",
       targetType: "PROJECT",
-      targetId: existingProject._id,
-      details: { targetTitle: `${existingProject.key} · ${existingProject.name}` },
+      targetId: project._id,
+      details: { targetTitle: `${project.key} · ${project.name}` },
     });
 
     revalidatePath("/", "layout");
-
-    return {
-      success: true,
-      data: { id: projectId },
-    };
-  } catch (error) {
-    console.error("[deleteProjectAction]:", error);
-    return {
-      success: false,
-      error: "Erro interno ao excluir o projeto.",
-    };
-  }
-}
+    return { id: projectId };
+  },
+});
