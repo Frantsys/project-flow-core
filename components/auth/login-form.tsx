@@ -28,6 +28,8 @@ const URL_ERRORS: Record<string, string> = {
   Callback: PROVIDER_FAILED,
   CredentialsSignin: WRONG_CREDENTIALS,
   SessionRequired: "Entre para continuar.",
+  EmailNotVerified:
+    "O e-mail dessa conta não está verificado no provedor. Verifique o e-mail lá ou entre com e-mail e senha.",
 };
 
 /** Só aceita caminhos internos, para não redirecionar para outro site depois do login. */

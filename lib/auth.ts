@@ -7,6 +7,7 @@ import { User } from "@/server/db/models";
 import bcrypt from "bcryptjs";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import { MongoClient } from "mongodb";
+import { fetchGitHubEmails, isVerifiedOAuthEmail } from "./oauth-email";
 
 /**
  *  Cliente próprio do driver `mongodb` para o adapter do NextAuth.
@@ -34,6 +35,7 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      // vincular pelo e-mail é seguro aqui porque o callback signIn recusa e-mail não verificado
       allowDangerousEmailAccountLinking: true,
     }),
     GitHubProvider({
@@ -91,6 +93,21 @@ export const authOptions: NextAuthOptions = {
     },
   },
   callbacks: {
+    async signIn({ account, profile, user }) {
+      if (!account || account.provider === "credentials") return true;
+
+      const verified = isVerifiedOAuthEmail({
+        provider: account.provider,
+        email: user.email,
+        googleEmailVerified: (profile as { email_verified?: unknown } | undefined)?.email_verified,
+        githubEmails:
+          account.provider === "github" && account.access_token
+            ? await fetchGitHubEmails(account.access_token)
+            : undefined,
+      });
+
+      return verified ? true : "/auth/login?error=EmailNotVerified";
+    },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub!; // Adiciona ID na sessão
