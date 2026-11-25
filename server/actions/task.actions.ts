@@ -11,9 +11,12 @@ import { can } from "@/lib/permissions";
 import { requirePermission } from "../lib/access";
 import { recordHistory } from "../services/history.service";
 import { placeTask, rankAtEnd } from "../lib/rank";
+import { summarizeTask, suggestSubtasks } from "../lib/ai";
+import { enforceRateLimit } from "../lib/rate-limit";
 import {
   addCommentSchema,
   addSubtaskSchema,
+  aiSubtasksSchema,
   editCommentSchema,
   commentRefSchema,
   createTaskSchema,
@@ -354,6 +357,79 @@ export const deleteTaskAction = createAction({
 
     revalidateProjectPages();
     return { id: taskId };
+  },
+});
+
+const AI_DAILY_LIMIT = 50;
+
+/** Monta o contexto da tarefa para a IA: descrição, subtarefas e os últimos comentários. */
+async function aiContext(task: TaskLean) {
+  const comments = await Comment.find({ taskId: task._id })
+    .sort({ createdAt: -1 })
+    .limit(30)
+    .populate<{ authorId: { username: string } | null }>("authorId", "username")
+    .lean();
+  return {
+    code: task.code,
+    title: task.title,
+    description: task.description ?? "",
+    subtasks: task.subtasks.map((s) => ({ title: s.title, isCompleted: s.isCompleted })),
+    comments: comments
+      .reverse()
+      .map((c) => ({ author: c.authorId?.username ?? "Alguém", content: c.content })),
+  };
+}
+
+/** Limite de uso da IA por workspace e por dia (custo e abuso). */
+const enforceAiLimit = (workspaceId: Types.ObjectId) =>
+  enforceRateLimit(`ai:${workspaceId.toString()}`, AI_DAILY_LIMIT, 24 * 3_600_000);
+
+/** Resume a tarefa com a IA e grava em aiSummary, que todo o time vê. */
+export const summarizeTaskAction = createAction({
+  name: "task.aiSummary",
+  schema: taskIdSchema,
+  handler: async ({ taskId }, { userId }) => {
+    const { task, project } = await loadTask(taskId, userId);
+    await enforceAiLimit(project.workspaceId);
+    const summary = await summarizeTask(await aiContext(task));
+    await Task.updateOne({ _id: task._id }, { $set: { aiSummary: summary } });
+    revalidateProjectPages();
+    return { summary };
+  },
+});
+
+/** Sugere subtarefas; nada é gravado até a pessoa escolher quais quer. */
+export const suggestSubtasksAction = createAction({
+  name: "task.aiSubtasks",
+  schema: taskIdSchema,
+  handler: async ({ taskId }, { userId }) => {
+    const { task, project } = await loadTask(taskId, userId);
+    await enforceAiLimit(project.workspaceId);
+    return { subtasks: await suggestSubtasks(await aiContext(task)) };
+  },
+});
+
+/** Adiciona as subtarefas sugeridas que a pessoa escolheu, marcadas como geradas pela IA. */
+export const addAiSubtasksAction = createAction({
+  name: "task.addAiSubtasks",
+  schema: aiSubtasksSchema,
+  handler: async ({ taskId, titles }, { userId }) => {
+    const { task, history } = await loadTask(taskId, userId);
+    if (task.subtasks.length + titles.length > 100) fail("A tarefa já tem subtarefas demais.");
+    let order = task.subtasks.reduce((max, s) => Math.max(max, s.order), -1);
+    const created = titles.map((title) => ({
+      _id: new Types.ObjectId(),
+      title,
+      order: ++order,
+      isCompleted: false,
+      generatedByAi: true,
+    }));
+    await Task.updateOne({ _id: task._id }, { $push: { subtasks: { $each: created } } });
+    await Promise.all(
+      created.map((s) => history("CREATE", "SUBTASK", { field: "subtask", newValue: s.title }, s._id))
+    );
+    revalidateProjectPages();
+    return { added: created.length };
   },
 });
 

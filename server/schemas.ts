@@ -359,3 +359,7 @@ export const moveTaskSchema = z.object({
   // vai para o fim da coluna (ignora afterTaskId)
   toEnd: z.boolean().optional(),
 });
+
+export const aiSubtasksSchema = taskIdSchema.extend({
+  titles: z.array(z.string().trim().min(1).max(200)).min(1, "Escolha ao menos uma subtarefa.").max(10),
+});

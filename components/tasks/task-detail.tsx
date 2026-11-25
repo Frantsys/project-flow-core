@@ -41,6 +41,7 @@ import {
 import { UserAvatar } from "@/components/user-avatar";
 import { TaskTypeIndicator } from "@/components/projects/task-type";
 import { TaskComments } from "./task-comments";
+import { AiSubtaskSuggestions, AiSummary } from "./task-ai";
 import { useRefreshOnFocus } from "@/hooks/use-refresh-on-focus";
 import type {
   ProjectSprintSummaryDTO,
@@ -64,6 +65,8 @@ export interface TaskDetailProps {
   members: WorkspaceMemberDTO[];
   currentUser: { id: string; role: WorkspaceRole };
   boardUrl: string;
+  /** Há chave da IA configurada: mostra resumo e sugestões. */
+  aiEnabled?: boolean;
   /** No Sheet, `X` fecha o painel; na página, volta ao quadro. */
   onClose?: () => void;
 }
@@ -75,6 +78,7 @@ export function TaskDetail({
   members,
   currentUser,
   boardUrl,
+  aiEnabled = false,
   onClose,
 }: TaskDetailProps) {
   const router = useRouter();
@@ -307,6 +311,8 @@ export function TaskDetail({
           </dd>
         </dl>
 
+        {(aiEnabled || task.aiSummary) && <AiSummary taskId={task.id} summary={task.aiSummary} />}
+
         <section className="flex flex-col gap-2" aria-labelledby="sec-description">
           <h3 id="sec-description" className="text-sm font-semibold">
             Descrição
@@ -405,6 +411,7 @@ export function TaskDetail({
               Adicionar
             </Button>
           </form>
+          {aiEnabled && <AiSubtaskSuggestions taskId={task.id} />}
         </section>
 
         <TaskComments

@@ -3,6 +3,7 @@ import { getWorkspace, requireUser } from "@/lib/session";
 import { getProjectByKey } from "@/server/services/project.service";
 import { getTaskDetail } from "@/server/services/task.service";
 import { TaskDetail } from "./task-detail";
+import { aiEnabled } from "@/server/lib/ai";
 import { TaskSheet } from "./task-sheet";
 
 export type TaskParams = Promise<{ workspaceSlug: string; projectKey: string; code: string }>;
@@ -32,6 +33,7 @@ export async function TaskDetailLoader({
     members: workspace.members,
     currentUser: { id: user.id, role: workspace.currentUserRole },
     boardUrl: `/w/${workspace.slug}/projects/${project.key}`,
+    aiEnabled: aiEnabled(),
   };
 
   return variant === "sheet" ? (
