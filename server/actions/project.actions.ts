@@ -2,15 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
-
 import { verifyWorkspacePermission } from "@/server/services/permission.service";
 import { CreateProjectInput, createProjectSchema, DeleteProjectInput, deleteProjectSchema, UpdateProjectInput, updateProjectSchema } from "../schemas";
 import { ActionResult } from "@/types";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
-import { ChangeHistory, DocumentModel, Project, Sprint, Task } from "../db/models";
+import { ChangeHistory, Project, Sprint, Task } from "../db/models";
 import z from "@/node_modules/zod/v4/classic/external.cjs";
 import mongoose, { Types } from "mongoose";
+import { recordChangeHistory } from "../services/change_history.service";
 
 
 export async function createProjectAction(
@@ -54,6 +54,17 @@ export async function createProjectAction(
 
     revalidatePath("/", "layout");
 
+    await recordChangeHistory({
+      workspaceId,
+      targetType: "PROJECT",
+      targetId: project._id,
+      parentId: null,
+      actorId: session.user.id,
+      action: "CREATED",
+      summary: `criou o projeto ${project.name} (${project.key})`,
+      details: { key: project.key, name: project.name },
+    });
+
     return {
       success: true,
       data: {
@@ -63,20 +74,6 @@ export async function createProjectAction(
       },
     };
   } catch (error) {
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      (error as { code: number }).code === 11000
-    ) {
-      return {
-        success: false,
-        error: "Já existe um projeto com essa chave neste workspace.",
-        fieldErrors: {
-          key: ["Esta chave já está em uso neste workspace."],
-        },
-      };
-    }
 
     console.error("[createProjectAction]:", error);
     return {
@@ -93,6 +90,9 @@ interface UpdatedProjectLean {
   key: string;
   description?: string | null;
 }
+
+
+
 
 export async function updateProjectAction(
   input: UpdateProjectInput
@@ -115,7 +115,7 @@ export async function updateProjectAction(
       return {
         success: false,
         error: "Dados inválidos.",
-        fieldErrors: parsed.error.flatten().fieldErrors,
+        fieldErrors: z.flattenError(parsed.error).fieldErrors,
       };
     }
 
@@ -165,6 +165,20 @@ export async function updateProjectAction(
 
     revalidatePath("/", "layout");
 
+    await recordChangeHistory({
+      workspaceId: existingProject.workspaceId,
+      targetType: "PROJECT",
+      targetId: updated._id,
+      parentId: null,
+      actorId: session.user.id,
+      action: "UPDATED",
+      summary: `atualizou o projeto ${updated.name} (${updated.key})`,
+      details: {
+        key: updated.key,
+        updatedFields: Object.keys(updateData),
+      },
+    });
+
     return {
       success: true,
       data: {
@@ -195,7 +209,6 @@ interface IdOnlyLean {
  *  como essa entidade possui muitas chaves estrangeiras, e o mongodb não possui
  *  estratégia de exclusão em cascata, algumas medidas devem ser tomadas
  */
-
 export async function deleteProjectAction(
   input: DeleteProjectInput
 ): Promise<ActionResult<{ id: string }>> {
@@ -222,8 +235,8 @@ export async function deleteProjectAction(
     // encontra o projeto pelo seu id e retorna também o id do workspace para validar 
     // permissões do membro
     const existingProject = await Project.findById(projectId)
-      .select("workspaceId")
-      .lean<{ _id: Types.ObjectId; workspaceId: Types.ObjectId }>();
+      .select("workspaceId name key")
+      .lean<{ _id: Types.ObjectId; workspaceId: Types.ObjectId, name: string, key: string }>();
 
     if (!existingProject) {
       return { success: false, error: "Projeto não encontrado." };
@@ -243,17 +256,15 @@ export async function deleteProjectAction(
     // coleta IDs dos filhos para limpar também o histórico polimórfico associado a eles
     // uso de Promise.all([]) para execução de múltiplos processos assícronos ao mesmo tempo
     // resulta em melhor performance 
-    const [tasks, sprints, documents] = await Promise.all([
+    const [tasks, sprints] = await Promise.all([
       Task.find({ projectId }).select("_id").lean<IdOnlyLean[]>(),
       Sprint.find({ projectId }).select("_id").lean<IdOnlyLean[]>(),
-      DocumentModel.find({ projectId }).select("_id").lean<IdOnlyLean[]>(),
     ]);
 
     const relatedTargetIds: Types.ObjectId[] = [
       existingProject._id,
       ...tasks.map((t) => t._id),
       ...sprints.map((s) => s._id),
-      ...documents.map((d) => d._id),
     ];
 
     // simulação de CASCADE
@@ -268,11 +279,8 @@ export async function deleteProjectAction(
     try {
       await mongosession.withTransaction(async () => {
 
-        await Task.deleteMany({ projectId }, { mongosession });
-
-        await Sprint.deleteMany({ projectId }, { mongosession });
-        await DocumentModel.deleteMany({ projectId }, { mongosession });
-        
+        await Task.deleteMany({ projectId }, { session: mongosession });
+        await Sprint.deleteMany({ projectId }, { session: mongosession });
         await ChangeHistory.deleteMany(
           {
             $or: [
@@ -280,7 +288,7 @@ export async function deleteProjectAction(
               { targetId: { $in: relatedTargetIds } },
             ],
           },
-          { mongosession }
+          { session: mongosession }
         );
 
         await Project.findByIdAndDelete(projectId, { mongosession });
@@ -289,9 +297,18 @@ export async function deleteProjectAction(
       await mongosession.endSession();
     }
 
-    await Project.findByIdAndDelete(projectId);
-
     revalidatePath("/", "layout");
+
+    await recordChangeHistory({
+      workspaceId: existingProject.workspaceId,
+      targetType: "PROJECT",
+      targetId: existingProject._id,
+      parentId: null,
+      actorId: session.user.id,
+      action: "DELETED",
+      summary: `excluiu o projeto ${existingProject.name} (${existingProject.key})`,
+      details: { key: existingProject.key, name: existingProject.name },
+    });
 
     return {
       success: true,

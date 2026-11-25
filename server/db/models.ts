@@ -1,5 +1,5 @@
 import mongoose, { Document, Model, Schema, Types } from "mongoose";
-import { SprintStatus, TaskPriority, TaskType } from "./types";
+import { ChangeActionType, ChangeTargetType, SprintStatus, TaskPriority, TaskType } from "./types";
 
 /**
  *  Uso de Schema e Model mongoose para mapear entidades definidas no arquivo de modelo-er
@@ -246,62 +246,21 @@ export const Task: Model<ITask> =
   mongoose.models.Task || mongoose.model<ITask>("Task", TaskSchema);
 
 
-
-/**
- *  Referente a qualquer tipo de documentação escrita
- *  Feito em Markdown .md
- */
-export interface IDocument extends Document {
-  workspaceId: Types.ObjectId;
-  projectId?: Types.ObjectId | null;
-  authorId: Types.ObjectId;
-  parentDocId?: Types.ObjectId | null;
-  title: string;
-  content: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const DocumentSchema = new Schema<IDocument>(
-  {
-    workspaceId: { type: Schema.Types.ObjectId, ref: "Workspace", required: true, index: true },
-    projectId: { type: Schema.Types.ObjectId, ref: "Project", default: null, index: true },
-    authorId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    parentDocId: { type: Schema.Types.ObjectId, ref: "Document", default: null },
-    title: { type: String, required: true, trim: true, default: "Sem título" },
-    content: { type: String, default: "" },
-  },
-  { timestamps: true }
-);
-
-export const DocumentModel: Model<IDocument> =
-  mongoose.models.Document || mongoose.model<IDocument>("Document", DocumentSchema);
-
-
-
-
 /**
  *  Entidade referente ao sistema de auditoria e histórico de alterações no contexto de cada Workspace
  */
-export type HistoryAction = "CREATE" | "MODIFY" | "DELETE";
-export type HistoryTargetType =
-  | "PROJECT"
-  | "SPRINT"
-  | "TASK"
-  | "SUBTASK"
-  | "COMMENT"
-  | "DOCUMENT";
 
 export interface IChangeHistory extends Document {
   workspaceId: Types.ObjectId;
   projectId?: Types.ObjectId | null;
-  userId: Types.ObjectId;
+  actorId: Types.ObjectId;
   actorRole: WorkspaceRole;
-  action: HistoryAction;
-  targetType: HistoryTargetType;
+  action: ChangeActionType;
+  targetType: ChangeTargetType;
   targetId: Types.ObjectId;
   parentId?: Types.ObjectId | null;
   details: Record<string, unknown>;
+  summary: string
   createdAt: Date;
 }
 
@@ -309,7 +268,7 @@ const ChangeHistorySchema = new Schema<IChangeHistory>(
   {
     workspaceId: { type: Schema.Types.ObjectId, ref: "Workspace", required: true },
     projectId: { type: Schema.Types.ObjectId, ref: "Project", default: null },
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    actorId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     actorRole: {
       type: String,
       enum: ["OWNER", "ADMIN", "MEMBER"],
@@ -317,17 +276,18 @@ const ChangeHistorySchema = new Schema<IChangeHistory>(
     },
     action: {
       type: String,
-      enum: ["CREATE", "MODIFY", "DELETE"],
+      enum: ["CREATE", "MODIFY", "DELETE", "STATUS_CHANGED", "ASSIGNED", "COMMENTED", "MEMBER_ADDED", "MEMBER_REMOVED"],
       required: true,
     },
     targetType: {
       type: String,
-      enum: ["PROJECT", "SPRINT", "TASK", "SUBTASK", "COMMENT", "DOCUMENT"],
+      enum: ["WORKSPACE", "PROJECT", "SPRINT", "TASK", "SUBTASK", "COMMENT"],
       required: true,
     },
     targetId: { type: Schema.Types.ObjectId, required: true },
     parentId: { type: Schema.Types.ObjectId, default: null },
     details: { type: Schema.Types.Mixed, default: {} },
+    summary: { type: String, required: true }
   },
   {
     timestamps: { createdAt: true, updatedAt: false },

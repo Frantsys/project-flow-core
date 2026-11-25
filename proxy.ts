@@ -10,7 +10,7 @@ export async function proxy(req: NextRequest) {
     });
 
     const { pathname, search } = req.nextUrl;
-    const isAuthRoute = pathname.startsWith("/auth");
+    const isAuthRoute = pathname.startsWith("/auth")
 
     if (!token && !isAuthRoute) {
         const loginUrl = new URL("/auth/login", req.url);
