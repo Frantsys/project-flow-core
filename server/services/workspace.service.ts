@@ -1,15 +1,16 @@
 import "server-only";
 import {
+  ApiToken,
   ChangeHistory,
+  Comment,
   DocumentModel,
+  Invitation,
+  Notification,
   Project,
   Sprint,
   Task,
   Workspace,
   WorkspaceRole,
-  Comment,
-  Notification,
-  Invitation,
 } from "../db/models";
 import dbConnect from "@/lib/db";
 import {
@@ -246,6 +247,7 @@ export async function deleteWorkspace(
       await Comment.deleteMany({ workspaceId }, { session });
       await Notification.deleteMany({ workspaceId }, { session });
       await Invitation.deleteMany({ workspaceId }, { session });
+      await ApiToken.deleteMany({ workspaceId }, { session });
       await Sprint.deleteMany({ projectId: { $in: projectIds } }, { session });
       await DocumentModel.deleteMany({ workspaceId }, { session });
       await ChangeHistory.deleteMany({ workspaceId }, { session });

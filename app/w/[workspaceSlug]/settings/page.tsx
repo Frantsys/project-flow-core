@@ -20,6 +20,10 @@ import {
   PendingInvitations,
 } from "@/components/workspaces/member-management";
 import { getPendingInvitations } from "@/server/services/invitation.service";
+import { listApiTokens } from "@/server/services/public-api.service";
+import { ApiTokens } from "@/components/workspaces/api-tokens";
+
+const SITE_URL = process.env.NEXTAUTH_URL || "https://project-flow-core.vercel.app";
 
 export const metadata: Metadata = { title: "Configurações" };
 
@@ -37,7 +41,7 @@ export default function SettingsPage({ params, searchParams }: PageProps<"/w/[wo
   );
 }
 
-const TABS = ["geral", "membros", "historico"] as const;
+const TABS = ["geral", "membros", "historico", "api"] as const;
 
 async function Settings({
   params,
@@ -57,10 +61,15 @@ async function Settings({
   const role = workspace.currentUserRole;
   const canManage = can(role, "workspace.update");
   const invitations = can(role, "member.manage") ? await getPendingInvitations(workspace.id) : [];
+  const apiTokens = canManage ? await listApiTokens(workspace.id) : [];
   const info = { id: workspace.id, name: workspace.name, slug: workspace.slug };
   const requested = TABS.find((t) => t === tab);
   const initial =
-    requested && (requested !== "geral" || canManage) ? requested : canManage ? "geral" : "membros";
+    requested && ((requested !== "geral" && requested !== "api") || canManage)
+      ? requested
+      : canManage
+        ? "geral"
+        : "membros";
 
   return (
     <Tabs defaultValue={initial} className="gap-5">
@@ -68,6 +77,7 @@ async function Settings({
         {canManage && <TabsTrigger value="geral">Geral</TabsTrigger>}
         <TabsTrigger value="membros">Membros</TabsTrigger>
         <TabsTrigger value="historico">Histórico</TabsTrigger>
+        {canManage && <TabsTrigger value="api">API</TabsTrigger>}
       </TabsList>
 
       {canManage && (
@@ -144,6 +154,12 @@ async function Settings({
           </div>
         </Card>
       </TabsContent>
+
+      {canManage && (
+        <TabsContent value="api">
+          <ApiTokens workspaceId={workspace.id} tokens={apiTokens} origin={SITE_URL} />
+        </TabsContent>
+      )}
 
       <TabsContent value="historico">
         <Card>
