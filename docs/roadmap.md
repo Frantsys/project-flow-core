@@ -595,3 +595,7 @@ A API do Claude não tem plano gratuito, mas o custo de um portfólio fica em ce
   Vercel Web Analytics e Speed Insights. Ficam para depois:
   - Sentry e envio de logs (precisam de conta), cache com tags (2.4) e jobs agendados (2.6);
   - changelog público e página de status (o monitor pode usar `/api/health`).
+- **M8 — parcial**: verificação em duas etapas (1.6), IA na tarefa com resumo e sugestão de
+  subtarefas (8.1, 8.2, 8.5) e API pública v1 só leitura com tokens e OpenAPI (parte de 8.6).
+  Ficam para depois: texto livre virando tarefas (8.3), assistente do documento (8.4), escrita e
+  webhooks na API, integração com GitHub e inglês (6.9).

@@ -6,7 +6,8 @@
 
 ## Status
 
-> Aceita
+> Substituída pela ADR 010 (25/11/2026): as rotas internas `/api/workspaces/**` não eram usadas por
+> nenhuma tela e foram removidas; a API pública versionada fica em `/api/v1`.
 
 ## Contexto
 

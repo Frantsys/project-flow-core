@@ -31,6 +31,12 @@ workspace de exemplo sem cadastro (só leitura).
 - **Documentos em Markdown** com abas Escrever e Visualizar (tabelas, checklists, código).
 - **Primeiros passos** na visão geral do workspace, até o time estar configurado.
 - **Instalável (PWA)** no celular e no computador.
+- **Verificação em duas etapas** (TOTP, compatível com Google Authenticator, Authy e 1Password),
+  com códigos de recuperação; segredo criptografado no banco e cada código vale uma vez.
+- **IA na tarefa** (opcional, com `ANTHROPIC_API_KEY`): resumo da tarefa e sugestão de subtarefas
+  com o Claude Haiku 5.5, limitado a 50 usos por workspace por dia.
+- **API pública v1** só leitura, com tokens por workspace e especificação OpenAPI em
+  `/api/v1/openapi.json` ([ADR 010](docs/adrs/010-api-publica-v1.md)).
 - **Página inicial pública**, termos de uso, política de privacidade (LGPD), imagem de compartilhamento,
   sitemap e `/api/health` para monitores de disponibilidade.
 - **Quadro kanban** com colunas configuráveis (nome, ordem e categoria A fazer / Em andamento /
