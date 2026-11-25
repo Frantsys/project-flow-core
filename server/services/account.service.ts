@@ -8,6 +8,7 @@ export interface AccountDTO {
   email: string;
   emailVerified: boolean;
   hasPassword: boolean;
+  notifyByEmail: boolean;
   /** Provedores OAuth ligados à conta: "google", "github". */
   providers: string[];
   /** Workspaces de que a pessoa é dona: impedem a exclusão da conta. */
@@ -22,7 +23,7 @@ export async function getAccount(userId: string): Promise<AccountDTO | null> {
   await dbConnect();
 
   const [user, links, owned] = await Promise.all([
-    User.findById(userId).select("username email emailVerified +passwordHash").lean(),
+    User.findById(userId).select("username email emailVerified notifyByEmail +passwordHash").lean(),
     accountsCollection()
       .find({ userId: new Types.ObjectId(userId) }, { projection: { provider: 1 } })
       .toArray(),
@@ -35,6 +36,7 @@ export async function getAccount(userId: string): Promise<AccountDTO | null> {
     email: user.email,
     emailVerified: !!user.emailVerified,
     hasPassword: !!user.passwordHash,
+    notifyByEmail: user.notifyByEmail !== false,
     providers: [...new Set(links.map((l) => String(l.provider)))].sort(),
     ownedWorkspaces: owned.map((w) => ({ name: w.name, slug: w.slug })),
   };

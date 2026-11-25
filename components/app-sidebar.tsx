@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Check, ChevronsUpDown, FileText, House, ListChecks, Plus, SlidersHorizontal } from "lucide-react";
 import { CommandMenuButton } from "./command-menu";
+import { NotificationBell } from "./notification-bell";
 import {
   Sidebar,
   SidebarContent,
@@ -93,7 +94,10 @@ export function AppSidebar({ user, workspace, workspaces }: AppSidebarProps) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <CommandMenuButton className="w-full justify-start" />
+        <div className="flex gap-2">
+          <CommandMenuButton className="min-w-0 flex-1 justify-start" />
+          <NotificationBell />
+        </div>
       </SidebarHeader>
 
       <SidebarContent>

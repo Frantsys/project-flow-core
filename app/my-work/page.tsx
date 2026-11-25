@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
 import { UserMenu } from "@/components/user-menu";
 import { CommandMenuButton } from "@/components/command-menu";
+import { NotificationBell } from "@/components/notification-bell";
 import { TaskTypeIndicator } from "@/components/projects/task-type";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ export default function MyWorkPage() {
         <Logo />
         <div className="flex items-center gap-2">
           <CommandMenuButton className="hidden w-56 sm:flex" />
+          <NotificationBell />
           <Button asChild variant="ghost">
             <Link href="/workspaces">
               <ArrowLeft aria-hidden="true" />

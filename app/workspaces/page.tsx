@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Building2, ListChecks, Plus } from "lucide-react";
 import { CommandMenuButton } from "@/components/command-menu";
+import { NotificationBell } from "@/components/notification-bell";
 import { requireUser } from "@/lib/session";
 import { getUserWorkspaces } from "@/server/services/workspace.service";
 import { fullDate, initials, roleLabel } from "@/lib/labels";
@@ -31,6 +32,7 @@ export default function WorkspacesPage() {
         <Logo />
         <div className="flex items-center gap-2">
           <CommandMenuButton className="hidden w-56 sm:flex" />
+          <NotificationBell />
           <Button asChild variant="ghost">
             <Link href="/my-work">
               <ListChecks aria-hidden="true" />

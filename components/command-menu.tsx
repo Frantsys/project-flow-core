@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
+  Bell,
   Building2,
   FileText,
   FolderKanban,
@@ -128,6 +129,7 @@ export function CommandMenu() {
         ]
       : []),
     { label: "Minhas tarefas", icon: ListChecks, action: () => go("/my-work") },
+    { label: "Notificações", icon: Bell, action: () => go("/inbox") },
     { label: "Todos os workspaces", icon: Building2, action: () => go("/workspaces") },
     { label: "Minha conta", icon: UserRound, action: () => go("/account") },
     { label: "Tema claro", icon: Sun, action: () => run(() => setTheme("light")) },

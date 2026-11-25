@@ -9,6 +9,7 @@ import { createAction, fail } from "../lib/action";
 import { enforceRateLimit } from "../lib/rate-limit";
 import { accountsCollection } from "../services/account.service";
 import { changePasswordSchema, deleteAccountSchema, updateProfileSchema } from "../schemas";
+import { z } from "zod";
 
 export const updateProfileAction = createAction({
   name: "account.updateProfile",
@@ -18,6 +19,16 @@ export const updateProfileAction = createAction({
     await User.updateOne({ _id: userId }, { $set: { username } });
     revalidatePath("/", "layout");
     return { username };
+  },
+});
+
+export const updateNotificationPrefsAction = createAction({
+  name: "account.notificationPrefs",
+  schema: z.object({ notifyByEmail: z.boolean() }),
+  handler: async ({ notifyByEmail }, { userId }) => {
+    await dbConnect();
+    await User.updateOne({ _id: userId }, { $set: { notifyByEmail } });
+    return { notifyByEmail };
   },
 });
 

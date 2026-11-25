@@ -8,6 +8,7 @@ import { appUrl, sendEmail } from "@/lib/email";
 import { Invitation, User, Workspace, WorkspaceRole } from "../db/models";
 import { hashToken } from "../lib/auth-tokens";
 import { enforceRateLimit } from "../lib/rate-limit";
+import { notify } from "../services/notification.service";
 import { createAction, fail } from "../lib/action";
 import { canChangeRole, canRemoveMember } from "@/lib/permissions";
 import { requirePermission } from "../lib/access";
@@ -140,7 +141,15 @@ export const acceptInvitationAction = createAction({
     // o link chegou no e-mail da pessoa: isso também confirma o e-mail
     await User.updateOne({ _id: userId, emailVerified: null }, { $set: { emailVerified: new Date() } });
 
-    const workspace = await Workspace.findById(invitation.workspaceId).select("slug").lean();
+    const workspace = await Workspace.findById(invitation.workspaceId).select("slug name").lean();
+    await notify({
+      type: "INVITE_ACCEPTED",
+      recipients: [invitation.invitedBy],
+      actorId: userId,
+      workspaceId: invitation.workspaceId,
+      title: workspace?.name ?? "o workspace",
+      href: `/w/${workspace?.slug}/settings?tab=membros`,
+    });
     revalidateWorkspace();
     return { slug: workspace?.slug ?? null };
   },

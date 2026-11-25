@@ -10,8 +10,11 @@ import { requestPasswordResetAction, resendVerificationAction } from "@/server/a
 import {
   changePasswordAction,
   deleteAccountAction,
+  updateNotificationPrefsAction,
   updateProfileAction,
 } from "@/server/actions/account.actions";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { changePasswordSchema } from "@/server/schemas";
 import type { AccountDTO } from "@/server/services/account.service";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +47,7 @@ export function AccountSettings({ account }: { account: AccountDTO }) {
       <div className="flex flex-col gap-6">
         <ProfileCard name={account.name} />
         <EmailCard email={account.email} verified={account.emailVerified} />
+        <NotificationsCard notifyByEmail={account.notifyByEmail} />
         <PasswordCard email={account.email} hasPassword={account.hasPassword} />
         <ProvidersCard providers={account.providers} />
         <DeleteAccountCard email={account.email} ownedWorkspaces={account.ownedWorkspaces} />
@@ -356,6 +360,49 @@ function DeleteAccountCard({
           </AlertDialogContent>
         </AlertDialog>
       </CardFooter>
+    </Card>
+  );
+}
+
+function NotificationsCard({ notifyByEmail }: { notifyByEmail: boolean }) {
+  const [checked, setChecked] = useState(notifyByEmail);
+  const [pending, setPending] = useState(false);
+
+  async function toggle(next: boolean) {
+    setChecked(next);
+    setPending(true);
+    const result = await updateNotificationPrefsAction({ notifyByEmail: next });
+    setPending(false);
+    if (!result.success) {
+      setChecked(!next);
+      toast.error(result.error);
+      return;
+    }
+    toast.success(next ? "Você vai receber e-mails de notificação." : "E-mails de notificação desligados.");
+  }
+
+  return (
+    <Card id="notificacoes">
+      <CardHeader>
+        <CardTitle className="font-semibold">Notificações</CardTitle>
+        <CardDescription>Tudo aparece no sino. Por e-mail, só o que pede ação sua.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-start gap-3">
+          <Checkbox
+            id="notify-email"
+            checked={checked}
+            disabled={pending}
+            onCheckedChange={(v) => toggle(v === true)}
+          />
+          <div className="grid gap-1">
+            <Label htmlFor="notify-email">Receber por e-mail</Label>
+            <p className="text-sm text-muted-foreground">
+              Quando atribuírem uma tarefa a você ou mencionarem você com @ num comentário.
+            </p>
+          </div>
+        </div>
+      </CardContent>
     </Card>
   );
 }
