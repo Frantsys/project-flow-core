@@ -2,13 +2,19 @@
 
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { LogOut, UserRound } from "lucide-react";
+import { useTheme } from "next-themes";
+import { LogOut, Palette, UserRound } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -17,6 +23,7 @@ import type { CurrentUser } from "@/lib/session";
 
 /** Menu da conta: só o avatar no topo da página de Workspaces, avatar + nome na sidebar. */
 export function UserMenu({ user, showName = false }: { user: CurrentUser; showName?: boolean }) {
+  const { theme, setTheme } = useTheme();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -46,6 +53,20 @@ export function UserMenu({ user, showName = false }: { user: CurrentUser; showNa
             Minha conta
           </Link>
         </DropdownMenuItem>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <Palette aria-hidden="true" />
+            Tema
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={setTheme}>
+              <DropdownMenuRadioItem value="light">Claro</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="dark">Escuro</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="system">Do sistema</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => signOut({ callbackUrl: "/auth/login" })}>
           <LogOut aria-hidden="true" />
           Sair

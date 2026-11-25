@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Check, ChevronsUpDown, FileText, House, Plus, SlidersHorizontal } from "lucide-react";
+import { Check, ChevronsUpDown, FileText, House, ListChecks, Plus, SlidersHorizontal } from "lucide-react";
+import { CommandMenuButton } from "./command-menu";
 import {
   Sidebar,
   SidebarContent,
@@ -40,6 +41,7 @@ export function AppSidebar({ user, workspace, workspaces }: AppSidebarProps) {
 
   const nav = [
     { href: base, label: "Visão geral", icon: House, active: pathname === base },
+    { href: "/my-work", label: "Minhas tarefas", icon: ListChecks, active: pathname === "/my-work" },
     {
       href: `${base}/docs`,
       label: "Documentos",
@@ -91,6 +93,7 @@ export function AppSidebar({ user, workspace, workspaces }: AppSidebarProps) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <CommandMenuButton className="w-full justify-start" />
       </SidebarHeader>
 
       <SidebarContent>
