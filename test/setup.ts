@@ -7,6 +7,9 @@ process.env.NEXTAUTH_SECRET = "test-secret";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn(), updateTag: vi.fn() }));
 
+// o limite de tentativas lê o IP dos cabeçalhos da requisição
+vi.mock("next/headers", () => ({ headers: async () => new Headers({ "x-forwarded-for": "203.0.113.7" }) }));
+
 // a sessão vem do getServerSession: os testes trocam o usuário logado com actAs() (test/helpers.ts)
 vi.mock("next-auth", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next-auth")>()),

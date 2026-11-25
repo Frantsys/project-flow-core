@@ -318,3 +318,50 @@ ChangeHistorySchema.index({ parentId: 1, createdAt: -1 });
 
 export const ChangeHistory: Model<IChangeHistory> =
   mongoose.models.ChangeHistory || mongoose.model<IChangeHistory>("ChangeHistory", ChangeHistorySchema);
+
+/** Janela fixa do limite de tentativas: `_id` = ação + identificador + janela; o TTL apaga as vencidas. */
+export interface IRateLimit {
+  _id: string;
+  count: number;
+  expiresAt: Date;
+}
+
+const RateLimitSchema = new Schema<IRateLimit>(
+  {
+    _id: { type: String, required: true },
+    count: { type: Number, default: 0 },
+    expiresAt: { type: Date, required: true },
+  },
+  { versionKey: false }
+);
+
+RateLimitSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+export const RateLimit: Model<IRateLimit> =
+  mongoose.models.RateLimit || mongoose.model<IRateLimit>("RateLimit", RateLimitSchema);
+
+export type AuthTokenPurpose = "VERIFY_EMAIL" | "RESET_PASSWORD";
+
+/** Link de uso único enviado por e-mail. Guarda só o hash do token; o TTL apaga os vencidos. */
+export interface IAuthToken {
+  userId: Types.ObjectId;
+  purpose: AuthTokenPurpose;
+  tokenHash: string;
+  expiresAt: Date;
+}
+
+const AuthTokenSchema = new Schema<IAuthToken>(
+  {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    purpose: { type: String, enum: ["VERIFY_EMAIL", "RESET_PASSWORD"], required: true },
+    tokenHash: { type: String, required: true, unique: true },
+    expiresAt: { type: Date, required: true },
+  },
+  { versionKey: false }
+);
+
+AuthTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+AuthTokenSchema.index({ userId: 1, purpose: 1 });
+
+export const AuthToken: Model<IAuthToken> =
+  mongoose.models.AuthToken || mongoose.model<IAuthToken>("AuthToken", AuthTokenSchema);

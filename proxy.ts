@@ -9,6 +9,8 @@ export async function proxy(req: NextRequest) {
 
   const { pathname, search } = req.nextUrl;
   const isAuthRoute = pathname.startsWith("/auth");
+  // links que chegam por e-mail: precisam abrir mesmo com alguém logado
+  const isEmailLink = pathname === "/auth/verify" || pathname === "/auth/reset";
 
   if (!token && !isAuthRoute) {
     const loginUrl = new URL("/auth/login", req.url);
@@ -22,7 +24,7 @@ export async function proxy(req: NextRequest) {
   }
 
   // Caso o usuário já esteja autenticado e tenta acessar /login ou /signup, é redirecionado para home
-  if (token && isAuthRoute) {
+  if (token && isAuthRoute && !isEmailLink) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 

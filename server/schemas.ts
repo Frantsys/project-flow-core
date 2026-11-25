@@ -1,30 +1,61 @@
 import { z } from "zod";
 
+const usernameField = z
+  .string()
+  .trim()
+  .min(2, "O nome deve ter pelo menos 2 caracteres.")
+  .max(60, "O nome deve ter no máximo 60 caracteres.");
+
+const emailField = z.email("Informe um e-mail válido.").trim().toLowerCase();
+
+// 72 é o limite do bcrypt: o que passar disso seria ignorado sem aviso
+const passwordField = z
+  .string()
+  .min(8, "A senha deve ter no mínimo 8 caracteres.")
+  .max(72, "A senha deve ter no máximo 72 caracteres.");
+
+const passwordsMatch = {
+  check: (data: { password: string; confirmPassword: string }) => data.password === data.confirmPassword,
+  error: { message: "As senhas não coincidem.", path: ["confirmPassword"] },
+};
+
 export const signUpSchema = z
   .object({
-    username: z
-      .string()
-      .trim()
-      .min(2, "O nome deve ter pelo menos 2 caracteres.")
-      .max(60, "O nome deve ter no máximo 60 caracteres."),
-
-    email: z.email("Informe um e-mail válido.").trim().toLowerCase(),
-    password: z
-      .string()
-      .min(8, "A senha deve ter no mínimo 8 caracteres.")
-      .max(72, "A senha deve ter no máximo 72 caracteres."),
-
+    username: usernameField,
+    email: emailField,
+    password: passwordField,
     confirmPassword: z.string().min(1, "Confirme a sua senha."),
   })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "As senhas não coincidem.",
-    path: ["confirmPassword"],
-  });
+  .refine(passwordsMatch.check, passwordsMatch.error);
 
 export const loginSchema = z.object({
-  email: z.email("Informe um e-mail válido.").trim().toLowerCase(),
+  email: emailField,
   password: z.string().min(1, "Informe a sua senha."),
 });
+
+export const forgotPasswordSchema = z.object({ email: emailField });
+
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1, "Link inválido."),
+    password: passwordField,
+    confirmPassword: z.string().min(1, "Confirme a sua senha."),
+  })
+  .refine(passwordsMatch.check, passwordsMatch.error);
+
+export const verifyEmailSchema = z.object({ token: z.string().min(1, "Link inválido.") });
+
+export const updateProfileSchema = z.object({ username: usernameField });
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Informe a senha atual."),
+    password: passwordField,
+    confirmPassword: z.string().min(1, "Confirme a nova senha."),
+  })
+  .refine(passwordsMatch.check, passwordsMatch.error);
+
+export const deleteAccountSchema = z.object({ email: emailField });
 
 export type SignUpInput = z.infer<typeof signUpSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

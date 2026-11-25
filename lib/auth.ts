@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import { MongoClient } from "mongodb";
 import { fetchGitHubEmails, isVerifiedOAuthEmail } from "./oauth-email";
+import { ipFrom, rateLimit, tooManyAttemptsMessage } from "@/server/lib/rate-limit";
 
 /**
  *  Cliente próprio do driver `mongodb` para o adapter do NextAuth.
@@ -51,10 +52,19 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Senha", type: "password" },
       },
 
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         await dbConnect();
 
         if (!credentials?.email || !credentials.password) throw new Error("Credenciais incorretas.");
+
+        // 5 tentativas a cada 15 min por IP + e-mail: freia força bruta sem travar a conta para outros IPs
+        const forwarded = req?.headers?.["x-forwarded-for"] as string | undefined;
+        const limit = await rateLimit(
+          `login:${ipFrom(forwarded)}:${credentials.email.toLowerCase()}`,
+          5,
+          15 * 60_000
+        );
+        if (!limit.allowed) throw new Error(tooManyAttemptsMessage(limit.retryAfterSeconds));
 
         const user = await User.findOne({ email: credentials.email }).select("+passwordHash");
 
@@ -88,7 +98,13 @@ export const authOptions: NextAuthOptions = {
       await dbConnect();
       await User.updateOne(
         { _id: user.id },
-        { $set: { username: user.name || user.email?.split("@")[0] || "Usuário" } }
+        {
+          $set: {
+            username: user.name || user.email?.split("@")[0] || "Usuário",
+            // o adapter só cria contas vindas do Google/GitHub, e o callback signIn já exigiu e-mail verificado
+            emailVerified: new Date(),
+          },
+        }
       );
     },
   },
@@ -106,7 +122,22 @@ export const authOptions: NextAuthOptions = {
             : undefined,
       });
 
-      return verified ? true : "/auth/login?error=EmailNotVerified";
+      if (!verified) return "/auth/login?error=EmailNotVerified";
+
+      // conta antiga com senha que agora entra pelo provedor: o e-mail ficou comprovado
+      if (user.email) {
+        await dbConnect();
+        await User.updateOne(
+          { email: user.email.toLowerCase(), emailVerified: null },
+          { $set: { emailVerified: new Date() } }
+        );
+      }
+      return true;
+    },
+    async jwt({ token, trigger, session }) {
+      // useSession().update({ name }) depois de editar o perfil em Minha conta
+      if (trigger === "update" && typeof session?.name === "string") token.name = session.name;
+      return token;
     },
     async session({ session, token }) {
       if (session.user) {

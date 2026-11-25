@@ -67,7 +67,8 @@ export function LoginForm() {
 
     if (!result || result.error) {
       setPending(false);
-      setFormError(WRONG_CREDENTIALS);
+      // o authorize devolve a mensagem do limite de tentativas; qualquer outro erro é genérico
+      setFormError(result?.error?.startsWith("Muitas tentativas") ? result.error : WRONG_CREDENTIALS);
       return;
     }
 
@@ -99,7 +100,15 @@ export function LoginForm() {
         </Field>
 
         <Field data-invalid={!!fieldErrors.password}>
-          <FieldLabel htmlFor="password">Senha</FieldLabel>
+          <div className="flex items-center justify-between">
+            <FieldLabel htmlFor="password">Senha</FieldLabel>
+            <Link
+              href="/auth/forgot"
+              className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Esqueci a senha
+            </Link>
+          </div>
           <Input
             id="password"
             name="password"
