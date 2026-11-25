@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Plus, UserRound } from "lucide-react";
 import { getWorkspace, requireUser } from "@/lib/session";
@@ -8,12 +9,14 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/user-avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProjectHeader } from "@/components/projects/project-header";
 import { TaskTypeIndicator } from "@/components/projects/task-type";
 import { CreateTaskDialog } from "@/components/projects/create-task-dialog";
 import { TaskStatusMenu } from "@/components/projects/task-status-menu";
+import { ProjectMenu } from "@/components/projects/project-menu";
 import type { TaskDTO } from "@/server/db/types";
 
 export default function BoardPage({ params }: PageProps<"/w/[workspaceSlug]/projects/[projectKey]">) {
@@ -43,16 +46,24 @@ async function Board({ params }: { params: Promise<{ workspaceSlug: string; proj
         project={project}
         view="board"
         actions={
-          <CreateTaskDialog
-            projectId={project.id}
-            statuses={project.statuses}
-            trigger={
-              <Button>
-                <Plus aria-hidden="true" />
-                Nova tarefa
-              </Button>
-            }
-          />
+          <div className="flex flex-wrap gap-2">
+            {workspace.currentUserRole !== "MEMBER" && (
+              <ProjectMenu
+                project={{ id: project.id, name: project.name, key: project.key, description: project.description, taskCount: project.tasks.length }}
+                workspaceSlug={workspace.slug}
+              />
+            )}
+            <CreateTaskDialog
+              projectId={project.id}
+              statuses={project.statuses}
+              trigger={
+                <Button>
+                  <Plus aria-hidden="true" />
+                  Nova tarefa
+                </Button>
+              }
+            />
+          </div>
         }
       />
 
@@ -88,7 +99,15 @@ async function Board({ params }: { params: Promise<{ workspaceSlug: string; proj
                     Nenhuma tarefa aqui. Use + para criar.
                   </p>
                 ) : (
-                  tasks.map((task) => <TaskCard key={task.id} task={task} statuses={project.statuses} now={now} />)
+                  tasks.map((task) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      statuses={project.statuses}
+                      href={`/w/${workspace.slug}/projects/${project.key}/tasks/${task.code}`}
+                      now={now}
+                    />
+                  ))
                 )}
               </section>
             );
@@ -99,23 +118,30 @@ async function Board({ params }: { params: Promise<{ workspaceSlug: string; proj
   );
 }
 
-function TaskCard({ task, statuses, now }: { task: TaskDTO; statuses: string[]; now: Date }) {
+function TaskCard({ task, statuses, href, now }: { task: TaskDTO; statuses: string[]; href: string; now: Date }) {
   const priority = priorityBadge[task.priority];
   const due = task.dueDate ? shortDate(task.dueDate, now) : null;
   const overdue = task.dueDate ? new Date(task.dueDate) < now : false;
 
   return (
-    <Card size="sm" className="rounded-[10px] shadow-xs">
+    <Card size="sm" className="relative rounded-[10px] shadow-xs transition-colors hover:border-border-strong has-[a:focus-visible]:ring-3 has-[a:focus-visible]:ring-ring/50">
       <CardHeader className="flex items-center gap-2">
         <TaskTypeIndicator type={task.type} />
         <span className="font-mono text-xs font-medium text-text-secondary">{task.code}</span>
         <Badge variant={priority.variant} className="ml-auto">
           {priority.label}
         </Badge>
-        <TaskStatusMenu taskId={task.id} taskCode={task.code} status={task.status} statuses={statuses} />
+        <div className="relative z-10">
+          <TaskStatusMenu taskId={task.id} taskCode={task.code} status={task.status} statuses={statuses} />
+        </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-2.5">
-        <CardTitle className="line-clamp-3 text-sm leading-snug font-medium">{task.title}</CardTitle>
+        <CardTitle className="line-clamp-3 text-sm leading-snug font-medium">
+          {/* o link cobre o card inteiro (after:inset-0); o menu fica por cima com z-10 */}
+          <Link href={href} scroll={false} className="outline-none after:absolute after:inset-0 after:content-['']">
+            {task.title}
+          </Link>
+        </CardTitle>
         <div className="flex items-center gap-2 text-xs text-text-secondary">
           {task.storyPoints !== null && (
             <Badge variant="outline" className="h-5 px-1.5">
@@ -126,12 +152,15 @@ function TaskCard({ task, statuses, now }: { task: TaskDTO; statuses: string[]; 
             <span className={cn((overdue || due === "hoje") && "font-medium text-destructive-text")}>{due}</span>
           )}
           {task.sprint && <span className="truncate">{task.sprint.name}</span>}
-          <Avatar className="ml-auto size-6" title={task.assignee ? "Responsável" : "Sem responsável"}>
-            {task.assignee?.image ? <AvatarImage src={task.assignee.image} alt="" /> : null}
-            <AvatarFallback className="bg-avatar text-badge-foreground">
-              <UserRound className="size-3.5" aria-label={task.assignee ? "Responsável" : "Sem responsável"} />
-            </AvatarFallback>
-          </Avatar>
+          {task.assignee ? (
+            <UserAvatar name={task.assignee.name} image={task.assignee.image} size="sm" className="ml-auto" />
+          ) : (
+            <Avatar className="ml-auto size-6" title="Sem responsável">
+              <AvatarFallback className="bg-avatar text-badge-foreground">
+                <UserRound className="size-3.5" aria-label="Sem responsável" />
+              </AvatarFallback>
+            </Avatar>
+          )}
         </div>
       </CardContent>
     </Card>
