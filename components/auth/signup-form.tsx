@@ -116,6 +116,10 @@ export function SignupForm() {
             {pending && <Spinner />}
             {pending ? "Criando conta…" : "Criar conta"}
           </Button>
+          <FieldDescription className="text-center text-xs">
+            Ao criar a conta você concorda com os <Link href="/terms">Termos de uso</Link> e a{" "}
+            <Link href="/privacy">Política de privacidade</Link>.
+          </FieldDescription>
           <FieldDescription className="text-center">
             Já tem conta?{" "}
             <Link href={`/auth/login?callbackUrl=${encodeURIComponent(callbackUrl)}`}>Entrar</Link>

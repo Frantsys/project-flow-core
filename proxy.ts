@@ -9,6 +9,12 @@ export async function proxy(req: NextRequest) {
 
   const { pathname, search } = req.nextUrl;
   const isAuthRoute = pathname.startsWith("/auth");
+  // páginas abertas a qualquer pessoa: página inicial e textos legais
+  const isPublicPage = pathname === "/" || pathname === "/terms" || pathname === "/privacy";
+
+  // quem já está logado não vê a página de apresentação: vai direto para o trabalho
+  if (token && pathname === "/") return NextResponse.redirect(new URL("/workspaces", req.url));
+  if (!token && isPublicPage) return NextResponse.next();
   // links que chegam por e-mail: precisam abrir mesmo com alguém logado
   const isEmailLink = pathname === "/auth/verify" || pathname === "/auth/reset";
 
@@ -25,7 +31,7 @@ export async function proxy(req: NextRequest) {
 
   // Caso o usuário já esteja autenticado e tenta acessar /login ou /signup, é redirecionado para home
   if (token && isAuthRoute && !isEmailLink) {
-    return NextResponse.redirect(new URL("/", req.url));
+    return NextResponse.redirect(new URL("/workspaces", req.url));
   }
 
   return NextResponse.next();
@@ -35,5 +41,7 @@ export async function proxy(req: NextRequest) {
 // Isso implica que toda e qualquer rota ainda deve chamar getServerSession(authOptions) para verificar as permissões de acesso
 export const config = {
   // manifesto e ícones do PWA são públicos: o navegador os busca sem sessão
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon.svg|icons/).*)"],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon.svg|icons/|robots.txt|sitemap.xml|opengraph-image).*)",
+  ],
 };
