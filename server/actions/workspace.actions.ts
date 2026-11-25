@@ -1,23 +1,27 @@
-"use server"
+"use server";
 
 import { ActionResult } from "@/types";
-import { CreateWorkspaceInput, createWorkspaceSchema, DeleteWorkspaceInput, deleteWorkspaceSchema, UpdateWorkspaceInput, updateWorkspaceSchema } from "../schemas";
+import {
+  CreateWorkspaceInput,
+  createWorkspaceSchema,
+  DeleteWorkspaceInput,
+  deleteWorkspaceSchema,
+  UpdateWorkspaceInput,
+  updateWorkspaceSchema,
+} from "../schemas";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import { Workspace } from "../db/models";
 import { generateWorkspaceSlug } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
-import z from "zod";
+import { z } from "zod";
 import { deleteWorkspace, updateWorkspace } from "../services/workspace.service";
-
-
 
 export async function createWorkspaceAction(
   input: CreateWorkspaceInput
 ): Promise<ActionResult<{ id: string; slug: string }>> {
   try {
-
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return { success: false, error: "Sessão expirada. Faça login novamente." };
@@ -34,7 +38,6 @@ export async function createWorkspaceAction(
 
     await dbConnect();
 
-
     const workspace = await Workspace.create({
       name: parsed.data.name,
       slug: generateWorkspaceSlug(parsed.data.name),
@@ -47,7 +50,6 @@ export async function createWorkspaceAction(
         },
       ],
     });
-
 
     revalidatePath("/", "layout");
 
@@ -66,8 +68,6 @@ export async function createWorkspaceAction(
     };
   }
 }
-
-
 
 export async function updateWorkspaceAction(
   input: UpdateWorkspaceInput
@@ -106,38 +106,36 @@ export async function updateWorkspaceAction(
   }
 }
 
-
 export async function deleteWorkspaceAction(
-    input: DeleteWorkspaceInput
-): Promise<ActionResult<{ id: string, name: string }>> {
-    try {
-        const session = await getServerSession(authOptions);
+  input: DeleteWorkspaceInput
+): Promise<ActionResult<{ id: string; name: string }>> {
+  try {
+    const session = await getServerSession(authOptions);
 
-        if (!session?.user?.id) {
-            return { success: false, error: "Sessão expirada, faça login novamente." }
-        }
-
-        const parsed = deleteWorkspaceSchema.safeParse(input);
-        if (!parsed.success) return {
-            success: false,
-            error: "ID inválido.",
-            fieldErrors: z.flattenError(parsed.error).fieldErrors
-        }
-
-        const result = await deleteWorkspace(session.user.id, parsed.data.workspaceId);
-        if (!result.success) return result;
-
-        revalidatePath("/", "layout");
-
-
-        return result;
-    } catch (error) {
-        console.error("[deleteWorkspaceAction]:", error);
-
-        return {
-            success: false,
-            error: "Erro interno ao atualizar o workspace.",
-        };
+    if (!session?.user?.id) {
+      return { success: false, error: "Sessão expirada, faça login novamente." };
     }
-}
 
+    const parsed = deleteWorkspaceSchema.safeParse(input);
+    if (!parsed.success)
+      return {
+        success: false,
+        error: "ID inválido.",
+        fieldErrors: z.flattenError(parsed.error).fieldErrors,
+      };
+
+    const result = await deleteWorkspace(session.user.id, parsed.data.workspaceId);
+    if (!result.success) return result;
+
+    revalidatePath("/", "layout");
+
+    return result;
+  } catch (error) {
+    console.error("[deleteWorkspaceAction]:", error);
+
+    return {
+      success: false,
+      error: "Erro interno ao atualizar o workspace.",
+    };
+  }
+}

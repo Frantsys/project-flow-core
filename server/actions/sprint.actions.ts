@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { Types } from "mongoose";
-import z from "zod";
+import { z } from "zod";
 
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
@@ -29,7 +29,11 @@ interface SprintLean {
 }
 
 function invalid(error: z.ZodError) {
-  return { success: false as const, error: "Dados inválidos.", fieldErrors: z.flattenError(error).fieldErrors };
+  return {
+    success: false as const,
+    error: "Dados inválidos.",
+    fieldErrors: z.flattenError(error).fieldErrors,
+  };
 }
 
 function revalidateProjectPages() {
@@ -105,13 +109,15 @@ export async function startSprintAction(input: { sprintId: string }): Promise<Ac
     await dbConnect();
     const sprint = await Sprint.findById(parsed.data.sprintId).lean<SprintLean>();
     if (!sprint) return { success: false, error: "Sprint não encontrada." };
-    if (sprint.status !== "PLANNED") return { success: false, error: "Só uma sprint planejada pode ser iniciada." };
+    if (sprint.status !== "PLANNED")
+      return { success: false, error: "Só uma sprint planejada pode ser iniciada." };
 
     const auth = await authorize(sprint.projectId, session.user.id);
     if (!auth.ok) return { success: false, error: auth.error };
 
     const active = await Sprint.exists({ projectId: sprint.projectId, status: "ACTIVE" });
-    if (active) return { success: false, error: "Já existe uma sprint ativa. Conclua ela antes de iniciar outra." };
+    if (active)
+      return { success: false, error: "Já existe uma sprint ativa. Conclua ela antes de iniciar outra." };
 
     await Sprint.updateOne(
       { _id: sprint._id },
@@ -162,7 +168,11 @@ export async function completeSprintAction(input: {
     if (!auth.ok) return { success: false, error: auth.error };
 
     if (moveToSprintId) {
-      const target = await Sprint.findOne({ _id: moveToSprintId, projectId: sprint.projectId, status: "PLANNED" })
+      const target = await Sprint.findOne({
+        _id: moveToSprintId,
+        projectId: sprint.projectId,
+        status: "PLANNED",
+      })
         .select("_id")
         .lean();
       if (!target) return { success: false, error: "Escolha uma sprint planejada deste projeto." };
@@ -210,7 +220,8 @@ export async function deleteSprintAction(input: { sprintId: string }): Promise<A
     await dbConnect();
     const sprint = await Sprint.findById(parsed.data.sprintId).lean<SprintLean>();
     if (!sprint) return { success: false, error: "Sprint não encontrada." };
-    if (sprint.status !== "PLANNED") return { success: false, error: "Só sprints planejadas podem ser excluídas." };
+    if (sprint.status !== "PLANNED")
+      return { success: false, error: "Só sprints planejadas podem ser excluídas." };
 
     const auth = await authorize(sprint.projectId, session.user.id);
     if (!auth.ok) return { success: false, error: auth.error };

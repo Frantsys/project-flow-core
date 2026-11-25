@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { Types } from "mongoose";
-import z from "zod";
+import { z } from "zod";
 
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
@@ -19,7 +19,11 @@ interface WorkspaceMembersLean {
 }
 
 function invalid(error: z.ZodError) {
-  return { success: false as const, error: "Dados inválidos.", fieldErrors: z.flattenError(error).fieldErrors };
+  return {
+    success: false as const,
+    error: "Dados inválidos.",
+    fieldErrors: z.flattenError(error).fieldErrors,
+  };
 }
 
 function revalidateWorkspace() {
@@ -45,16 +49,24 @@ export async function addMemberAction(input: {
     if (!parsed.success) return invalid(parsed.error);
     const { workspaceId, email, role } = parsed.data;
 
-    const permission = await verifyWorkspacePermission({ workspaceId, userId: session.user.id, allowedRoles: ["OWNER", "ADMIN"] });
+    const permission = await verifyWorkspacePermission({
+      workspaceId,
+      userId: session.user.id,
+      allowedRoles: ["OWNER", "ADMIN"],
+    });
     if (!permission.authorized) return { success: false, error: permission.error };
 
     await dbConnect();
-    const user = await User.findOne({ email }).select("_id username").lean<{ _id: Types.ObjectId; username: string }>();
+    const user = await User.findOne({ email })
+      .select("_id username")
+      .lean<{ _id: Types.ObjectId; username: string }>();
     if (!user) {
       return {
         success: false,
         error: "Não há conta com esse e-mail.",
-        fieldErrors: { email: ["Não há conta com esse e-mail. Peça para a pessoa criar uma conta primeiro."] },
+        fieldErrors: {
+          email: ["Não há conta com esse e-mail. Peça para a pessoa criar uma conta primeiro."],
+        },
       };
     }
 
@@ -64,7 +76,11 @@ export async function addMemberAction(input: {
       { $push: { members: { userId: user._id, role, joinedAt: new Date() } } }
     );
     if (result.modifiedCount === 0) {
-      return { success: false, error: "Essa pessoa já é membro do workspace.", fieldErrors: { email: ["Essa pessoa já é membro."] } };
+      return {
+        success: false,
+        error: "Essa pessoa já é membro do workspace.",
+        fieldErrors: { email: ["Essa pessoa já é membro."] },
+      };
     }
 
     revalidateWorkspace();
@@ -89,11 +105,17 @@ export async function updateMemberRoleAction(input: {
     if (!parsed.success) return invalid(parsed.error);
     const { workspaceId, userId, role } = parsed.data;
 
-    const permission = await verifyWorkspacePermission({ workspaceId, userId: session.user.id, allowedRoles: ["OWNER", "ADMIN"] });
+    const permission = await verifyWorkspacePermission({
+      workspaceId,
+      userId: session.user.id,
+      allowedRoles: ["OWNER", "ADMIN"],
+    });
     if (!permission.authorized) return { success: false, error: permission.error };
 
     await dbConnect();
-    const workspace = await Workspace.findById(workspaceId).select("ownerId members").lean<WorkspaceMembersLean>();
+    const workspace = await Workspace.findById(workspaceId)
+      .select("ownerId members")
+      .lean<WorkspaceMembersLean>();
     const target = workspace?.members.find((m) => m.userId.toString() === userId);
     if (!workspace || !target) return { success: false, error: "Membro não encontrado." };
     if (target.role === "OWNER" || workspace.ownerId.toString() === userId) {
@@ -103,7 +125,10 @@ export async function updateMemberRoleAction(input: {
       return { success: false, error: "Só o dono pode alterar o papel de um admin." };
     }
 
-    await Workspace.updateOne({ _id: workspaceId, "members.userId": target.userId }, { $set: { "members.$.role": role } });
+    await Workspace.updateOne(
+      { _id: workspaceId, "members.userId": target.userId },
+      { $set: { "members.$.role": role } }
+    );
 
     revalidateWorkspace();
     return { success: true, data: { role } };
@@ -117,7 +142,10 @@ export async function updateMemberRoleAction(input: {
  * Remove alguém do workspace. Dono e admins removem outros membros; qualquer membro pode sair
  * (remover a si mesmo). O dono não pode ser removido nem sair.
  */
-export async function removeMemberAction(input: { workspaceId: string; userId: string }): Promise<ActionResult<{ userId: string }>> {
+export async function removeMemberAction(input: {
+  workspaceId: string;
+  userId: string;
+}): Promise<ActionResult<{ userId: string }>> {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return { success: false, error: "Sessão expirada. Faça login novamente." };
@@ -135,7 +163,9 @@ export async function removeMemberAction(input: { workspaceId: string; userId: s
     if (!permission.authorized) return { success: false, error: permission.error };
 
     await dbConnect();
-    const workspace = await Workspace.findById(workspaceId).select("ownerId members").lean<WorkspaceMembersLean>();
+    const workspace = await Workspace.findById(workspaceId)
+      .select("ownerId members")
+      .lean<WorkspaceMembersLean>();
     const target = workspace?.members.find((m) => m.userId.toString() === userId);
     if (!workspace || !target) return { success: false, error: "Membro não encontrado." };
     if (target.role === "OWNER" || workspace.ownerId.toString() === userId) {

@@ -19,7 +19,12 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,7 +64,11 @@ export function DocumentEditor({ doc, workspace, ancestors, childCount }: Docume
   function save() {
     if (!dirty || pending) return;
     startTransition(async () => {
-      const result = await updateDocumentAction({ documentId: doc.id, title: title.trim() || "Sem título", content });
+      const result = await updateDocumentAction({
+        documentId: doc.id,
+        title: title.trim() || "Sem título",
+        content,
+      });
       if (!result.success) {
         setError(result.fieldErrors?.title?.[0] ?? result.error);
         return;
@@ -121,8 +130,8 @@ export function DocumentEditor({ doc, workspace, ancestors, childCount }: Docume
           ) : (
             <>
               <Check aria-hidden="true" className="size-4 text-success-fg" />
-              <span className="text-success-fg">Salvo</span> · {doc.author ? `criado por ${doc.author.name} · ` : ""}editado{" "}
-              {timeAgo(savedAt)}
+              <span className="text-success-fg">Salvo</span> ·{" "}
+              {doc.author ? `criado por ${doc.author.name} · ` : ""}editado {timeAgo(savedAt)}
             </>
           )}
         </span>
@@ -207,8 +216,9 @@ export function DocumentEditor({ doc, workspace, ancestors, childCount }: Docume
                     return;
                   }
                   toast.success("Documento excluído.");
+                  const parent = ancestors.at(-1);
                   router.replace(
-                    ancestors.length ? `/w/${workspace.slug}/docs/${ancestors[ancestors.length - 1].id}` : `/w/${workspace.slug}/docs`
+                    parent ? `/w/${workspace.slug}/docs/${parent.id}` : `/w/${workspace.slug}/docs`
                   );
                   router.refresh();
                 })

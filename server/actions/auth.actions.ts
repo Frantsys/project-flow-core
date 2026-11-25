@@ -1,16 +1,13 @@
-"use server"
+"use server";
 
 import { ActionResult } from "@/types";
 import { SignUpInput, signUpSchema } from "../schemas";
 import dbConnect from "@/lib/db";
 import { User } from "../db/models";
 import bcrypt from "bcryptjs";
-import z from "@/node_modules/zod/v4/classic/external.cjs";
+import { z } from "zod";
 
-
-export async function signUpAction(
-  input: SignUpInput
-): Promise<ActionResult<{ id: string; email: string }>> {
+export async function signUpAction(input: SignUpInput): Promise<ActionResult<{ id: string; email: string }>> {
   try {
     const parsed = signUpSchema.safeParse(input);
     if (!parsed.success) {
@@ -28,7 +25,6 @@ export async function signUpAction(
     const existingUser = await User.findOne({ email }).select("+passwordHash").lean();
 
     if (existingUser) {
-
       // caso o usuário já tenha entrado antes usando Google ou GitHub com esse e-mail
       if (!existingUser.passwordHash) {
         return {
@@ -66,5 +62,3 @@ export async function signUpAction(
     };
   }
 }
-
-

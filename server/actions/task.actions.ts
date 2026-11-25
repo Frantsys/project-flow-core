@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { Types } from "mongoose";
-import z from "zod";
+import { z } from "zod";
 
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
@@ -146,7 +146,7 @@ export async function createTaskAction(
     }
 
     const status = parsed.data.status || project.statuses[0];
-    if (!project.statuses.includes(status)) {
+    if (!status || !project.statuses.includes(status)) {
       return {
         success: false,
         error: "Status inválido para este projeto.",
@@ -155,11 +155,7 @@ export async function createTaskAction(
     }
 
     // $inc é atômico: duas criações simultâneas nunca recebem o mesmo número
-    const counter = await Project.findByIdAndUpdate(
-      projectId,
-      { $inc: { taskSequence: 1 } },
-      { new: true }
-    )
+    const counter = await Project.findByIdAndUpdate(projectId, { $inc: { taskSequence: 1 } }, { new: true })
       .select("taskSequence")
       .lean<{ taskSequence: number }>();
 
@@ -212,7 +208,9 @@ export async function updateTaskStatusAction(
   if (!parsed.success) return invalid(parsed.error);
 
   const result = await updateTaskAction({ taskId: parsed.data.taskId, status: parsed.data.status });
-  return result.success ? { success: true, data: { id: parsed.data.taskId, status: parsed.data.status } } : result;
+  return result.success
+    ? { success: true, data: { id: parsed.data.taskId, status: parsed.data.status } }
+    : result;
 }
 
 const dateOnly = (d?: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : null);
@@ -236,7 +234,13 @@ export async function updateTaskAction(input: UpdateTaskInput): Promise<ActionRe
 
     const set: Record<string, unknown> = {};
     const changes: { field: string; oldValue: string | null; newValue: string | null }[] = [];
-    const track = (field: string, key: string, oldValue: unknown, newValue: unknown, label?: [string | null, string | null]) => {
+    const track = (
+      field: string,
+      key: string,
+      oldValue: unknown,
+      newValue: unknown,
+      label?: [string | null, string | null]
+    ) => {
       if ((oldValue ?? null) === (newValue ?? null)) return;
       set[key] = newValue;
       changes.push({
@@ -256,7 +260,8 @@ export async function updateTaskAction(input: UpdateTaskInput): Promise<ActionRe
     }
     if (data.type !== undefined) track("type", "type", task.type, data.type);
     if (data.priority !== undefined) track("priority", "priority", task.priority, data.priority);
-    if (data.storyPoints !== undefined) track("storyPoints", "storyPoints", task.storyPoints ?? null, data.storyPoints);
+    if (data.storyPoints !== undefined)
+      track("storyPoints", "storyPoints", task.storyPoints ?? null, data.storyPoints);
     if (data.status !== undefined) {
       if (!project.statuses.includes(data.status)) {
         return { success: false, error: "Status inválido para este projeto." };
@@ -276,15 +281,20 @@ export async function updateTaskAction(input: UpdateTaskInput): Promise<ActionRe
       if (oldId !== data.assigneeId) {
         const names = new Map<string, string>();
         if (data.assigneeId) {
-          const isMember = await Workspace.exists({ _id: project.workspaceId, "members.userId": data.assigneeId });
+          const isMember = await Workspace.exists({
+            _id: project.workspaceId,
+            "members.userId": data.assigneeId,
+          });
           if (!isMember) return { success: false, error: "O responsável precisa ser membro do workspace." };
         }
         const ids = [oldId, data.assigneeId].filter(Boolean) as string[];
-        const people = await User.find({ _id: { $in: ids } }).select("username").lean<{ _id: Types.ObjectId; username: string }[]>();
+        const people = await User.find({ _id: { $in: ids } })
+          .select("username")
+          .lean<{ _id: Types.ObjectId; username: string }[]>();
         people.forEach((p) => names.set(p._id.toString(), p.username));
         track("assignee", "assigneeId", oldId, data.assigneeId, [
-          oldId ? names.get(oldId) ?? null : null,
-          data.assigneeId ? names.get(data.assigneeId) ?? null : null,
+          oldId ? (names.get(oldId) ?? null) : null,
+          data.assigneeId ? (names.get(data.assigneeId) ?? null) : null,
         ]);
       }
     }
@@ -297,9 +307,12 @@ export async function updateTaskAction(input: UpdateTaskInput): Promise<ActionRe
           .select("name status")
           .lean<{ _id: Types.ObjectId; name: string; status: string }[]>();
         const target = sprints.find((s) => s._id.toString() === data.sprintId);
-        if (data.sprintId && !target) return { success: false, error: "Sprint não encontrada neste projeto." };
-        if (target?.status === "COMPLETED") return { success: false, error: "Não é possível adicionar tarefas a uma sprint concluída." };
-        const name = (id: string | null) => (id ? sprints.find((s) => s._id.toString() === id)?.name ?? null : null);
+        if (data.sprintId && !target)
+          return { success: false, error: "Sprint não encontrada neste projeto." };
+        if (target?.status === "COMPLETED")
+          return { success: false, error: "Não é possível adicionar tarefas a uma sprint concluída." };
+        const name = (id: string | null) =>
+          id ? (sprints.find((s) => s._id.toString() === id)?.name ?? null) : null;
         track("sprint", "sprintId", oldId, data.sprintId, [name(oldId), name(data.sprintId)]);
       }
     }
@@ -329,7 +342,9 @@ export async function deleteTaskAction(input: { taskId: string }): Promise<Actio
     const ctx = await loadTask(parsed.data.taskId, userId);
     if (!ctx.ok) return { success: false, error: ctx.error };
 
-    const reporter = await Task.findById(ctx.task._id).select("reporterId").lean<{ reporterId: Types.ObjectId }>();
+    const reporter = await Task.findById(ctx.task._id)
+      .select("reporterId")
+      .lean<{ reporterId: Types.ObjectId }>();
     if (ctx.role === "MEMBER" && reporter?.reporterId.toString() !== userId) {
       return { success: false, error: "Só quem criou a tarefa, um admin ou o dono pode excluí-la." };
     }
@@ -345,7 +360,10 @@ export async function deleteTaskAction(input: { taskId: string }): Promise<Actio
   }
 }
 
-export async function addSubtaskAction(input: { taskId: string; title: string }): Promise<ActionResult<{ id: string }>> {
+export async function addSubtaskAction(input: {
+  taskId: string;
+  title: string;
+}): Promise<ActionResult<{ id: string }>> {
   try {
     const userId = await requireSession();
     if (!userId) return SESSION_EXPIRED;
@@ -360,7 +378,17 @@ export async function addSubtaskAction(input: { taskId: string; title: string })
     const order = ctx.task.subtasks.reduce((max, s) => Math.max(max, s.order), -1) + 1;
     await Task.updateOne(
       { _id: ctx.task._id },
-      { $push: { subtasks: { _id: subtaskId, title: parsed.data.title, order, isCompleted: false, generatedByAi: false } } }
+      {
+        $push: {
+          subtasks: {
+            _id: subtaskId,
+            title: parsed.data.title,
+            order,
+            isCompleted: false,
+            generatedByAi: false,
+          },
+        },
+      }
     );
     await ctx.history("CREATE", "SUBTASK", { field: "subtask", newValue: parsed.data.title }, subtaskId);
 
@@ -372,7 +400,10 @@ export async function addSubtaskAction(input: { taskId: string; title: string })
   }
 }
 
-export async function toggleSubtaskAction(input: { taskId: string; subtaskId: string }): Promise<ActionResult<{ isCompleted: boolean }>> {
+export async function toggleSubtaskAction(input: {
+  taskId: string;
+  subtaskId: string;
+}): Promise<ActionResult<{ isCompleted: boolean }>> {
   try {
     const userId = await requireSession();
     if (!userId) return SESSION_EXPIRED;
@@ -406,7 +437,10 @@ export async function toggleSubtaskAction(input: { taskId: string; subtaskId: st
   }
 }
 
-export async function deleteSubtaskAction(input: { taskId: string; subtaskId: string }): Promise<ActionResult<{ id: string }>> {
+export async function deleteSubtaskAction(input: {
+  taskId: string;
+  subtaskId: string;
+}): Promise<ActionResult<{ id: string }>> {
   try {
     const userId = await requireSession();
     if (!userId) return SESSION_EXPIRED;
@@ -431,7 +465,10 @@ export async function deleteSubtaskAction(input: { taskId: string; subtaskId: st
   }
 }
 
-export async function addCommentAction(input: { taskId: string; content: string }): Promise<ActionResult<{ id: string }>> {
+export async function addCommentAction(input: {
+  taskId: string;
+  content: string;
+}): Promise<ActionResult<{ id: string }>> {
   try {
     const userId = await requireSession();
     if (!userId) return SESSION_EXPIRED;
@@ -445,7 +482,11 @@ export async function addCommentAction(input: { taskId: string; content: string 
     const commentId = new Types.ObjectId();
     await Task.updateOne(
       { _id: ctx.task._id },
-      { $push: { comments: { _id: commentId, authorId: userId, content: parsed.data.content, createdAt: new Date() } } }
+      {
+        $push: {
+          comments: { _id: commentId, authorId: userId, content: parsed.data.content, createdAt: new Date() },
+        },
+      }
     );
     await ctx.history("CREATE", "COMMENT", {}, commentId);
 
@@ -458,7 +499,10 @@ export async function addCommentAction(input: { taskId: string; content: string 
 }
 
 /** Exclui um comentário: o autor, um admin ou o dono do workspace. */
-export async function deleteCommentAction(input: { taskId: string; commentId: string }): Promise<ActionResult<{ id: string }>> {
+export async function deleteCommentAction(input: {
+  taskId: string;
+  commentId: string;
+}): Promise<ActionResult<{ id: string }>> {
   try {
     const userId = await requireSession();
     if (!userId) return SESSION_EXPIRED;

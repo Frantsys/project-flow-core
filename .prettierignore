@@ -1,0 +1,5 @@
+# Componentes copiados do shadcn/ui: mantidos como vieram para facilitar atualizar pela CLI
+components/ui
+package-lock.json
+.next
+docs/modelos-er

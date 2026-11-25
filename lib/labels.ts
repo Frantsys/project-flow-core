@@ -15,7 +15,10 @@ export const typeLabel: Record<TaskType, string> = {
   EPIC: "Épico",
 };
 
-export const priorityBadge: Record<TaskPriority, { label: string; variant: "muted" | "info" | "warning" | "danger" }> = {
+export const priorityBadge: Record<
+  TaskPriority,
+  { label: string; variant: "muted" | "info" | "warning" | "danger" }
+> = {
   LOW: { label: "Baixa", variant: "muted" },
   MEDIUM: { label: "Média", variant: "info" },
   HIGH: { label: "Alta", variant: "warning" },
@@ -30,8 +33,10 @@ export const sprintBadge: Record<SprintStatus, { label: string; variant: "info" 
 
 export function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  return ((parts[0][0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+  const first = parts[0]?.[0];
+  if (!first) return "?";
+  const last = parts.length > 1 ? (parts.at(-1)?.[0] ?? "") : "";
+  return (first + last).toUpperCase();
 }
 
 const MONTHS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];

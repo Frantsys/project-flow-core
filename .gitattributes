@@ -1,0 +1,5 @@
+# Repositório sempre em LF (o Prettier grava LF; evita diffs e falhas do lint-staged no Windows)
+* text=auto eol=lf
+*.pdf binary
+*.png binary
+*.ico binary

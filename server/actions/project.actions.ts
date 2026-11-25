@@ -5,14 +5,20 @@ import { getServerSession } from "next-auth";
 
 import { verifyWorkspacePermission } from "@/server/services/permission.service";
 import { recordHistory } from "@/server/services/history.service";
-import { CreateProjectInput, createProjectSchema, DeleteProjectInput, deleteProjectSchema, UpdateProjectInput, updateProjectSchema } from "../schemas";
+import {
+  CreateProjectInput,
+  createProjectSchema,
+  DeleteProjectInput,
+  deleteProjectSchema,
+  UpdateProjectInput,
+  updateProjectSchema,
+} from "../schemas";
 import { ActionResult } from "@/types";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import { ChangeHistory, DocumentModel, Project, Sprint, Task } from "../db/models";
-import z from "@/node_modules/zod/v4/classic/external.cjs";
+import { z } from "zod";
 import mongoose, { Types } from "mongoose";
-
 
 export async function createProjectAction(
   input: CreateProjectInput
@@ -28,7 +34,7 @@ export async function createProjectAction(
       return {
         success: false,
         error: "Dados inválidos.",
-        fieldErrors:  z.flattenError(parsed.error).fieldErrors,
+        fieldErrors: z.flattenError(parsed.error).fieldErrors,
       };
     }
 
@@ -98,7 +104,6 @@ export async function createProjectAction(
   }
 }
 
-
 interface UpdatedProjectLean {
   _id: Types.ObjectId;
   name: string;
@@ -106,9 +111,7 @@ interface UpdatedProjectLean {
   description?: string | null;
 }
 
-export async function updateProjectAction(
-  input: UpdateProjectInput
-): Promise<
+export async function updateProjectAction(input: UpdateProjectInput): Promise<
   ActionResult<{
     id: string;
     name: string;
@@ -127,7 +130,7 @@ export async function updateProjectAction(
       return {
         success: false,
         error: "Dados inválidos.",
-        fieldErrors: parsed.error.flatten().fieldErrors,
+        fieldErrors: z.flattenError(parsed.error).fieldErrors,
       };
     }
 
@@ -185,7 +188,12 @@ export async function updateProjectAction(
       targetId: existingProject._id,
       details:
         name !== undefined && name !== existingProject.name
-          ? { targetTitle: `${updated.key} · ${updated.name}`, field: "name", oldValue: existingProject.name, newValue: updated.name }
+          ? {
+              targetTitle: `${updated.key} · ${updated.name}`,
+              field: "name",
+              oldValue: existingProject.name,
+              newValue: updated.name,
+            }
           : { targetTitle: `${updated.key} · ${updated.name}` },
     });
 
@@ -209,12 +217,10 @@ export async function updateProjectAction(
   }
 }
 
-
 // interface essencial para que apenas o Id seja retornado em uma projeção .lean()
 interface IdOnlyLean {
   _id: Types.ObjectId;
 }
-
 
 /**
  *  Action para excluir um projeto
@@ -222,9 +228,7 @@ interface IdOnlyLean {
  *  estratégia de exclusão em cascata, algumas medidas devem ser tomadas
  */
 
-export async function deleteProjectAction(
-  input: DeleteProjectInput
-): Promise<ActionResult<{ id: string }>> {
+export async function deleteProjectAction(input: DeleteProjectInput): Promise<ActionResult<{ id: string }>> {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -244,8 +248,7 @@ export async function deleteProjectAction(
 
     await dbConnect();
 
-
-    // encontra o projeto pelo seu id e retorna também o id do workspace para validar 
+    // encontra o projeto pelo seu id e retorna também o id do workspace para validar
     // permissões do membro
     const existingProject = await Project.findById(projectId)
       .select("workspaceId key name")
@@ -268,7 +271,7 @@ export async function deleteProjectAction(
 
     // coleta IDs dos filhos para limpar também o histórico polimórfico associado a eles
     // uso de Promise.all([]) para execução de múltiplos processos assícronos ao mesmo tempo
-    // resulta em melhor performance 
+    // resulta em melhor performance
     const [tasks, sprints, documents] = await Promise.all([
       Task.find({ projectId }).select("_id").lean<IdOnlyLean[]>(),
       Sprint.find({ projectId }).select("_id").lean<IdOnlyLean[]>(),
@@ -298,13 +301,10 @@ export async function deleteProjectAction(
 
         await Sprint.deleteMany({ projectId }, { session: mongosession });
         await DocumentModel.deleteMany({ projectId }, { session: mongosession });
-        
+
         await ChangeHistory.deleteMany(
           {
-            $or: [
-              { parentId: existingProject._id },
-              { targetId: { $in: relatedTargetIds } },
-            ],
+            $or: [{ parentId: existingProject._id }, { targetId: { $in: relatedTargetIds } }],
           },
           { session: mongosession }
         );

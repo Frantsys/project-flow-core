@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { Types } from "mongoose";
-import z from "zod";
+import { z } from "zod";
 
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
@@ -21,7 +21,11 @@ interface DocLean {
 }
 
 function invalid(error: z.ZodError) {
-  return { success: false as const, error: "Dados inválidos.", fieldErrors: z.flattenError(error).fieldErrors };
+  return {
+    success: false as const,
+    error: "Dados inválidos.",
+    fieldErrors: z.flattenError(error).fieldErrors,
+  };
 }
 
 function revalidateDocs() {
@@ -54,7 +58,9 @@ export async function createDocumentAction(input: {
     await dbConnect();
 
     if (parentId) {
-      const parent = await DocumentModel.findOne({ _id: parentId, workspaceId }).select("projectId").lean<DocLean>();
+      const parent = await DocumentModel.findOne({ _id: parentId, workspaceId })
+        .select("projectId")
+        .lean<DocLean>();
       if (!parent) return { success: false, error: "Documento pai não encontrado." };
       projectId = parent.projectId?.toString() ?? null; // subdocumento fica no mesmo projeto do pai
     }
@@ -104,7 +110,9 @@ export async function updateDocumentAction(input: {
     const { documentId, title, content } = parsed.data;
 
     await dbConnect();
-    const doc = await DocumentModel.findById(documentId).select("workspaceId projectId title").lean<DocLean>();
+    const doc = await DocumentModel.findById(documentId)
+      .select("workspaceId projectId title")
+      .lean<DocLean>();
     if (!doc) return { success: false, error: "Documento não encontrado." };
 
     const permission = await member(doc.workspaceId.toString(), session.user.id);
@@ -126,7 +134,10 @@ export async function updateDocumentAction(input: {
       action: "MODIFY",
       targetType: "DOCUMENT",
       targetId: doc._id,
-      details: doc.title === title ? { targetTitle: title } : { targetTitle: title, field: "title", oldValue: doc.title, newValue: title },
+      details:
+        doc.title === title
+          ? { targetTitle: title }
+          : { targetTitle: title, field: "title", oldValue: doc.title, newValue: title },
     });
 
     revalidateDocs();
@@ -138,7 +149,9 @@ export async function updateDocumentAction(input: {
 }
 
 /** Exclui o documento e todos os subdocumentos abaixo dele. */
-export async function deleteDocumentAction(input: { documentId: string }): Promise<ActionResult<{ deleted: number }>> {
+export async function deleteDocumentAction(input: {
+  documentId: string;
+}): Promise<ActionResult<{ deleted: number }>> {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return { success: false, error: "Sessão expirada. Faça login novamente." };
@@ -147,7 +160,9 @@ export async function deleteDocumentAction(input: { documentId: string }): Promi
     if (!parsed.success) return invalid(parsed.error);
 
     await dbConnect();
-    const doc = await DocumentModel.findById(parsed.data.documentId).select("workspaceId projectId title").lean<DocLean>();
+    const doc = await DocumentModel.findById(parsed.data.documentId)
+      .select("workspaceId projectId title")
+      .lean<DocLean>();
     if (!doc) return { success: false, error: "Documento não encontrado." };
 
     const permission = await member(doc.workspaceId.toString(), session.user.id);
@@ -157,7 +172,9 @@ export async function deleteDocumentAction(input: { documentId: string }): Promi
     const ids: Types.ObjectId[] = [doc._id];
     let frontier: Types.ObjectId[] = [doc._id];
     while (frontier.length > 0) {
-      const children = await DocumentModel.find({ parentDocId: { $in: frontier } }).select("_id").lean<{ _id: Types.ObjectId }[]>();
+      const children = await DocumentModel.find({ parentDocId: { $in: frontier } })
+        .select("_id")
+        .lean<{ _id: Types.ObjectId }[]>();
       frontier = children.map((c) => c._id);
       ids.push(...frontier);
     }
