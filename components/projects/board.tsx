@@ -20,6 +20,7 @@ import {
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { moveTaskAction } from "@/server/actions/task.actions";
+import { useRefreshOnFocus } from "@/hooks/use-refresh-on-focus";
 import { filterTasks, hasFilters, parseTaskFilters } from "@/lib/task-filters";
 import { priorityBadge, shortDate } from "@/lib/labels";
 import { cn } from "@/lib/utils";
@@ -70,6 +71,9 @@ export function Board({ projectId, statuses, tasks, currentUserId, taskHref, now
 
   const containerOf = (id: UniqueIdentifier) =>
     id in columns ? String(id) : Object.keys(columns).find((c) => columns[c]!.some((t) => t.id === id));
+
+  // sem tempo real: busca de novo ao voltar para a aba, mas nunca no meio de um arraste
+  useRefreshOnFocus(!snapshot);
 
   const sensors = useSensors(
     // 6 px antes de começar: um clique simples continua abrindo a tarefa
