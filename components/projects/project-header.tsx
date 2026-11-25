@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { List, SquareKanban } from "lucide-react";
+import { CalendarDays, ChartColumn, List, Rows3, SquareKanban } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-/** Trilha, nome do projeto e as duas visões (Quadro / Backlog), cada uma com a própria URL. */
+/** Trilha, nome do projeto e as visões (Quadro, Backlog, Lista, Calendário, Relatórios), cada uma com a própria URL. */
 export function ProjectHeader({
   workspace,
   project,
@@ -20,7 +20,7 @@ export function ProjectHeader({
 }: {
   workspace: { name: string; slug: string };
   project: { name: string; key: string };
-  view: "board" | "backlog";
+  view: "board" | "backlog" | "list" | "calendar" | "reports";
   actions?: React.ReactNode;
 }) {
   const base = `/w/${workspace.slug}/projects/${project.key}`;
@@ -49,7 +49,7 @@ export function ProjectHeader({
         </div>
       </div>
       <Tabs value={view}>
-        <TabsList>
+        <TabsList className="max-w-full overflow-x-auto overflow-y-hidden">
           <TabsTrigger value="board" asChild>
             <Link href={base}>
               <SquareKanban aria-hidden="true" />
@@ -60,6 +60,24 @@ export function ProjectHeader({
             <Link href={`${base}/backlog`}>
               <List aria-hidden="true" />
               Backlog
+            </Link>
+          </TabsTrigger>
+          <TabsTrigger value="list" asChild>
+            <Link href={`${base}/list`}>
+              <Rows3 aria-hidden="true" />
+              Lista
+            </Link>
+          </TabsTrigger>
+          <TabsTrigger value="calendar" asChild>
+            <Link href={`${base}/calendar`}>
+              <CalendarDays aria-hidden="true" />
+              Calendário
+            </Link>
+          </TabsTrigger>
+          <TabsTrigger value="reports" asChild>
+            <Link href={`${base}/reports`}>
+              <ChartColumn aria-hidden="true" />
+              Relatórios
             </Link>
           </TabsTrigger>
         </TabsList>
