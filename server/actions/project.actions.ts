@@ -267,11 +267,11 @@ export async function deleteProjectAction(
 
     try {
       await mongosession.withTransaction(async () => {
+        // a opção do mongoose se chama `session`; com outro nome as operações rodavam fora da transação
+        await Task.deleteMany({ projectId }, { session: mongosession });
 
-        await Task.deleteMany({ projectId }, { mongosession });
-
-        await Sprint.deleteMany({ projectId }, { mongosession });
-        await DocumentModel.deleteMany({ projectId }, { mongosession });
+        await Sprint.deleteMany({ projectId }, { session: mongosession });
+        await DocumentModel.deleteMany({ projectId }, { session: mongosession });
         
         await ChangeHistory.deleteMany(
           {
@@ -280,16 +280,14 @@ export async function deleteProjectAction(
               { targetId: { $in: relatedTargetIds } },
             ],
           },
-          { mongosession }
+          { session: mongosession }
         );
 
-        await Project.findByIdAndDelete(projectId, { mongosession });
+        await Project.findByIdAndDelete(projectId, { session: mongosession });
       });
     } finally {
       await mongosession.endSession();
     }
-
-    await Project.findByIdAndDelete(projectId);
 
     revalidatePath("/", "layout");
 

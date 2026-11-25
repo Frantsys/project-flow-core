@@ -205,7 +205,7 @@ export async function deleteWorkspace(
   userId: string,
   workspaceId: string
 ): Promise<ActionResult<{ id: string, name: string }>> {
-  if (Types.ObjectId.isValid(workspaceId)) {
+  if (!Types.ObjectId.isValid(workspaceId)) {
     return {
       success: false,
       error: "ID de workspace inválido."

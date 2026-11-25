@@ -75,7 +75,7 @@ interface ProjectBaseLean {
 
 interface PopulatedTaskLean {
   _id: Types.ObjectId;
-  key: string;
+  code: string;
   title: string;
   type: TaskType;
   status: string;
@@ -135,7 +135,7 @@ export async function getProjectByKey(
   const [rawTasks, rawSprints] = await Promise.all([
     Task.find({ projectId: project._id })
       .select(
-        "_id key title type status priority storyPoints dueDate sprintId assigneeId"
+        "_id code title type status priority storyPoints dueDate sprintId assigneeId"
       )
       .populate("sprintId", "name")
       .populate("assigneeId", "image")
@@ -150,7 +150,7 @@ export async function getProjectByKey(
 
   const tasks: TaskDTO[] = rawTasks.map((task) => ({
     id: task._id.toString(),
-    code: task.key,
+    code: task.code,
     title: task.title,
     type: task.type,
     status: task.status,

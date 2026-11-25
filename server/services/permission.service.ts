@@ -25,7 +25,7 @@ export async function verifyWorkspacePermission({
     workspaceId,
     userId,
     allowedRoles
-}: VerifyWorkspacePermissionParams) {
+}: VerifyWorkspacePermissionParams): Promise<PermissionCheckResult> {
     if (!Types.ObjectId.isValid(workspaceId) || !Types.ObjectId.isValid(userId)) {
         return { authorized: false, error: "Identificador inválido." };
     }
