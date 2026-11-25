@@ -9,18 +9,23 @@ import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import { MongoClient } from "mongodb";
 
 /**
- *  "Gambiarra" para conseguir um MongoClient a partir da conexão com o MongoDB via mongoose
- *  é necessário e ideal para o adapter do next-auth com MongoDB.
- *  É uma função (e não uma promise criada ao importar o módulo) para conectar só quando o adapter
- *  precisar: uma falha momentânea do Atlas vira erro daquela requisição, não derruba a função,
- *  e a próxima tentativa reconecta pelo dbConnect.
+ *  Cliente próprio do driver `mongodb` para o adapter do NextAuth.
+ *  O adapter é feito para o driver 6, e o mongoose 9 usa o driver 7: entregar o cliente do mongoose
+ *  ao adapter quebrava o cadastro via Google/GitHub com "Unsupported BSON version".
+ *  É criado só quando o adapter precisa e fica em `global` para ser reaproveitado entre
+ *  invocações da função; se a conexão falhar, a próxima tentativa cria outra.
  */
-const getMongoClient = async () => {
-  const mongooseInstance = await dbConnect();
-  // shortcut: o mongoose 9 traz o driver mongodb 7 e o adapter declara ^6; as APIs usadas pelo adapter
-  // são compatíveis, por isso o cast. Remover quando o @auth/mongodb-adapter aceitar mongodb 7.
-  return mongooseInstance.connection.getClient() as unknown as MongoClient;
-};
+const globalForMongo = global as typeof globalThis & { _adapterClient?: Promise<MongoClient> };
+
+function getMongoClient() {
+  globalForMongo._adapterClient ??= new MongoClient(process.env.MONGODB_URI!, { maxPoolSize: 5 })
+    .connect()
+    .catch((error) => {
+      globalForMongo._adapterClient = undefined;
+      throw error;
+    });
+  return globalForMongo._adapterClient;
+}
 
 
 export const authOptions: NextAuthOptions = {
@@ -48,11 +53,16 @@ export const authOptions: NextAuthOptions = {
             async authorize(credentials) {
                 await dbConnect();
 
-                const user = await User.findOne({ email: credentials?.email! }).select("+passwordHash");
+                if (!credentials?.email || !credentials.password) throw new Error("Credenciais incorretas.");
+
+                const user = await User.findOne({ email: credentials.email }).select("+passwordHash");
 
                 if (!user) throw new Error("Credenciais incorretas.");
 
-                const isValid = await bcrypt.compare(credentials!.password, user.passwordHash!);
+                // contas criadas via Google/GitHub não têm senha
+                if (!user.passwordHash) throw new Error("Credenciais incorretas.");
+
+                const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
                 if (!isValid) throw new Error("Credenciais incorretas.");
 
                 return { id: user._id.toString(), email: user.email, name: user.username };
@@ -60,6 +70,8 @@ export const authOptions: NextAuthOptions = {
         })
     ],
     pages: {
+        // sem signIn, erros de OAuth caíam na página padrão do NextAuth, em inglês
+        signIn: "/auth/login",
         signOut: "/auth/login",
         error: "/auth/login",
         newUser: "/workspaces"
@@ -68,6 +80,17 @@ export const authOptions: NextAuthOptions = {
         strategy: "jwt",
     },
     secret: process.env.NEXTAUTH_SECRET,
+    events: {
+        // O adapter grava o nome em `name`, mas o app lê `username` (model User).
+        // Copia na criação para contas do Google/GitHub não aparecerem sem nome.
+        async createUser({ user }) {
+            await dbConnect();
+            await User.updateOne(
+                { _id: user.id },
+                { $set: { username: user.name || user.email?.split("@")[0] || "Usuário" } }
+            );
+        },
+    },
     callbacks: {
         async session({ session, token }) {
             if (session.user) {
