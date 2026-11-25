@@ -1,3 +1,5 @@
+export { cn } from "cn"
+
 
 /**
  * Função utilitária para gerar um Slug próprio aleatório para um Workspace
