@@ -171,7 +171,7 @@ export async function updateWorkspace(
   const updated = await Workspace.findByIdAndUpdate(
     input.workspaceId,
     { $set: { name: input.name } },
-    { new: true, runValidators: true }
+    { returnDocument: "after", runValidators: true }
   )
     .select("_id name slug")
     .lean<{ _id: Types.ObjectId; name: string; slug: string }>();

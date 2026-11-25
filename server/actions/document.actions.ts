@@ -82,7 +82,7 @@ export const updateDocumentAction = createAction({
     const updated = await DocumentModel.findByIdAndUpdate(
       documentId,
       { $set: { title, content } },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     )
       .select("updatedAt")
       .lean<{ updatedAt: Date }>();

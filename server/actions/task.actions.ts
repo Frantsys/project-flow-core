@@ -118,7 +118,11 @@ export const createTaskAction = createAction({
     }
 
     // $inc é atômico: duas criações simultâneas nunca recebem o mesmo número
-    const counter = await Project.findByIdAndUpdate(projectId, { $inc: { taskSequence: 1 } }, { new: true })
+    const counter = await Project.findByIdAndUpdate(
+      projectId,
+      { $inc: { taskSequence: 1 } },
+      { returnDocument: "after" }
+    )
       .select("taskSequence")
       .lean<{ taskSequence: number }>();
     if (!counter) fail("Projeto não encontrado.");

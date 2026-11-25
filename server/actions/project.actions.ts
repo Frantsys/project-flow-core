@@ -84,7 +84,7 @@ export const updateProjectAction = createAction({
     const updated = await Project.findByIdAndUpdate(
       projectId,
       { $set: set },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     )
       .select("_id name key description")
       .lean<ProjectLean>();

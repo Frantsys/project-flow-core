@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createProjectAction } from "@/server/actions/project.actions";
+import { suggestKey } from "@/lib/project-key";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,18 +22,6 @@ import {
 } from "@/components/ui/dialog";
 
 type Errors = Partial<Record<"name" | "key" | "description", string>>;
-
-/** Sugere a chave a partir das iniciais do nome: "Site institucional" → "SI". */
-function suggestKey(name: string) {
-  const letters = name
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toUpperCase()
-    .split(/[^A-Z0-9]+/)
-    .filter(Boolean);
-  const key = letters.length > 1 ? letters.map((w) => w[0]).join("") : (letters[0] ?? "").slice(0, 3);
-  return /^[A-Z]/.test(key) ? key.slice(0, 10) : "";
-}
 
 export function CreateProjectDialog({
   workspaceId,
