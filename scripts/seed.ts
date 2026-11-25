@@ -129,6 +129,7 @@ async function main() {
           email: `${p.key}@${DOMAIN}`,
           // só a conta demo entra com senha; as outras existem para aparecer como membros
           ...(p.key === "demo" ? { passwordHash } : {}),
+          emailVerified: new Date(),
         });
         return [p.key, user._id] as const;
       })
