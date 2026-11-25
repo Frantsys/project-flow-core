@@ -4,6 +4,8 @@ import NextAuth, { DefaultSession, User } from "next-auth";
 
 export interface CustomAuthUser extends User {
   id: string;
+  /** Entrou pelo botão "Ver demonstração": só leitura. */
+  demo?: boolean;
 }
 
 declare module "next-auth" {
@@ -15,5 +17,6 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     user?: CustomAuthUser;
+    demo?: boolean;
   }
 }

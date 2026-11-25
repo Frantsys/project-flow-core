@@ -24,10 +24,14 @@ export function fail(message: string, fieldErrors?: Record<string, string[]>): n
 }
 
 /** Único ponto que lê a sessão nas actions (substituído por um mock nos testes). */
-export async function getSessionUserId(): Promise<string | null> {
+export async function getSessionUser(): Promise<{ id: string; demo: boolean } | null> {
   const session = await getServerSession(authOptions);
-  return session?.user?.id ?? null;
+  return session?.user?.id ? { id: session.user.id, demo: !!session.user.demo } : null;
 }
+
+// leituras que a demonstração pode fazer; todo o resto altera dados e fica bloqueado
+const DEMO_ALLOWED = new Set(["search", "notification.unreadCount"]);
+const DEMO_READ_ONLY = "Esta é uma demonstração só para leitura. Crie uma conta grátis para editar.";
 
 interface ActionContext {
   userId: string;
@@ -57,8 +61,10 @@ export function createAction<S extends z.ZodType, R>({
 }: ActionOptions<S, R>) {
   return async (input: z.input<S>): Promise<ActionResult<R>> => {
     try {
-      const userId = await getSessionUserId();
+      const user = await getSessionUser();
+      const userId = user?.id ?? null;
       if (!userId && !isPublic) return { success: false, error: SESSION_EXPIRED };
+      if (user?.demo && !DEMO_ALLOWED.has(name)) return { success: false, error: DEMO_READ_ONLY };
 
       const parsed = schema.safeParse(input);
       if (!parsed.success) {

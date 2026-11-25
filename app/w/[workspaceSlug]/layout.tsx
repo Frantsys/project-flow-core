@@ -4,6 +4,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Logo } from "@/components/logo";
+import { DemoBanner } from "@/components/demo-banner";
 import { getWorkspace, requireUser } from "@/lib/session";
 import { getUserWorkspaces } from "@/server/services/workspace.service";
 
@@ -20,6 +21,9 @@ export default function WorkspaceLayout({ children, params }: LayoutProps<"/w/[w
           <SidebarTrigger aria-label="Abrir menu" />
           <Logo />
         </header>
+        <Suspense fallback={null}>
+          <DemoNotice />
+        </Suspense>
         {children}
       </SidebarInset>
     </SidebarProvider>
@@ -37,6 +41,11 @@ async function WorkspaceSidebar({ params }: { params: Promise<{ workspaceSlug: s
   if (!workspace) notFound();
 
   return <AppSidebar user={user} workspace={workspace} workspaces={workspaces} />;
+}
+
+async function DemoNotice() {
+  const user = await requireUser();
+  return user.isDemo ? <DemoBanner /> : null;
 }
 
 function SidebarSkeleton() {

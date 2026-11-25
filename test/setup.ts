@@ -14,8 +14,8 @@ vi.mock("next/headers", () => ({ headers: async () => new Headers({ "x-forwarded
 vi.mock("next-auth", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next-auth")>()),
   getServerSession: vi.fn(async () => {
-    const { currentUserId } = await import("./session-state");
-    return currentUserId() ? { user: { id: currentUserId() } } : null;
+    const { currentUserId, currentIsDemo } = await import("./session-state");
+    return currentUserId() ? { user: { id: currentUserId(), demo: currentIsDemo() } } : null;
   }),
 }));
 

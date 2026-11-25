@@ -2,9 +2,12 @@
  * Popula o banco de desenvolvimento ou de preview com um workspace de demonstração realista.
  *
  *   npm run seed            (usa .env.local: MONGODB_URI, MONGODB_DB e SEED_PASSWORD)
+ *   npm run seed -- --public-demo   (demonstração pública, inclusive em produção)
  *
- * Recusa rodar no banco de produção. Apaga e recria só os dados do workspace "acme-labs-demo"
- * e das contas @demo.projectflow.dev; o resto do banco fica intocado.
+ * Apaga e recria só os dados do workspace "acme-labs-demo" e das contas @demo.projectflow.dev;
+ * o resto do banco fica intocado. Sem --public-demo, recusa o banco de produção.
+ * Com --public-demo a conta demo não tem senha (entra pelo botão "Ver demonstração", em modo só
+ * leitura) e ninguém recebe e-mail: os endereços @demo.projectflow.dev não são nossos.
  */
 import bcrypt from "bcryptjs";
 import mongoose, { Types } from "mongoose";
@@ -27,13 +30,15 @@ const SLUG = "acme-labs-demo";
 const DOMAIN = "demo.projectflow.dev";
 const DAY = 86_400_000;
 
-if (!process.env.MONGODB_DB || DB_NAME === PRODUCTION_DB) {
+const PUBLIC_DEMO = process.argv.includes("--public-demo");
+
+if (!PUBLIC_DEMO && (!process.env.MONGODB_DB || DB_NAME === PRODUCTION_DB)) {
   console.error(
     `Seed recusado: defina MONGODB_DB com um banco que não seja "${PRODUCTION_DB}" (ex.: project-flow-dev).`
   );
   process.exit(1);
 }
-if (!process.env.SEED_PASSWORD || process.env.SEED_PASSWORD.length < 8) {
+if (!PUBLIC_DEMO && (!process.env.SEED_PASSWORD || process.env.SEED_PASSWORD.length < 8)) {
   console.error("Defina SEED_PASSWORD (mínimo de 8 caracteres) para a conta demo@" + DOMAIN + ".");
   process.exit(1);
 }
@@ -133,7 +138,7 @@ async function main() {
   }
   await User.deleteMany({ email: { $regex: `@${DOMAIN.replace(/\./g, "\\.")}$` } });
 
-  const passwordHash = await bcrypt.hash(process.env.SEED_PASSWORD!, 12);
+  const passwordHash = PUBLIC_DEMO ? null : await bcrypt.hash(process.env.SEED_PASSWORD!, 12);
   const users = Object.fromEntries(
     await Promise.all(
       people.map(async (p) => {
@@ -141,8 +146,9 @@ async function main() {
           username: p.username,
           email: `${p.key}@${DOMAIN}`,
           // só a conta demo entra com senha; as outras existem para aparecer como membros
-          ...(p.key === "demo" ? { passwordHash } : {}),
+          ...(p.key === "demo" && passwordHash ? { passwordHash } : {}),
           emailVerified: new Date(),
+          notifyByEmail: false,
         });
         return [p.key, user._id] as const;
       })
@@ -323,7 +329,11 @@ async function main() {
   });
 
   console.log(`Pronto: workspace /w/${SLUG}, ${projects.length} projetos, ${taskCount} tarefas.`);
-  console.log(`Entre com demo@${DOMAIN} e a senha definida em SEED_PASSWORD.`);
+  console.log(
+    PUBLIC_DEMO
+      ? `Demonstração pública: defina DEMO_USER_EMAIL=demo@${DOMAIN} no ambiente do app.`
+      : `Entre com demo@${DOMAIN} e a senha definida em SEED_PASSWORD.`
+  );
 }
 
 main()

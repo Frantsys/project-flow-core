@@ -11,6 +11,8 @@ export interface CurrentUser {
   name: string;
   email: string;
   image: string | null;
+  /** Sessão da demonstração pública (só leitura). */
+  isDemo: boolean;
 }
 
 /**
@@ -26,6 +28,7 @@ export const requireUser = cache(async (): Promise<CurrentUser> => {
     name: session.user.name ?? "",
     email: session.user.email ?? "",
     image: session.user.image ?? null,
+    isDemo: !!session.user.demo,
   };
 });
 

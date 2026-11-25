@@ -45,6 +45,21 @@ export const authOptions: NextAuthOptions = {
       allowDangerousEmailAccountLinking: true,
     }),
 
+    // "Ver demonstração": entra sem senha na conta demo pública (DEMO_USER_EMAIL), em modo só leitura.
+    // Sem a variável, o provedor recusa; o domínio fixo impede apontar para uma conta real.
+    CredentialsProvider({
+      id: "demo",
+      name: "Demonstração",
+      credentials: {},
+      async authorize() {
+        const email = process.env.DEMO_USER_EMAIL;
+        if (!email?.endsWith("@demo.projectflow.dev")) return null;
+        await dbConnect();
+        const user = await User.findOne({ email }).select("_id email username").lean();
+        return user ? { id: user._id.toString(), email: user.email, name: user.username } : null;
+      },
+    }),
+
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -110,7 +125,8 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async signIn({ account, profile, user }) {
-      if (!account || account.provider === "credentials") return true;
+      // e-mail e senha e a demonstração não passam por provedor externo: nada a verificar aqui
+      if (!account || account.type === "credentials") return true;
 
       const verified = isVerifiedOAuthEmail({
         provider: account.provider,
@@ -134,7 +150,9 @@ export const authOptions: NextAuthOptions = {
       }
       return true;
     },
-    async jwt({ token, trigger, session }) {
+    async jwt({ token, trigger, session, account }) {
+      // no login: lembra se a sessão é da demonstração (o bloqueio de escrita usa isso)
+      if (account) token.demo = account.provider === "demo";
       // useSession().update({ name }) depois de editar o perfil em Minha conta
       if (trigger === "update" && typeof session?.name === "string") token.name = session.name;
       return token;
@@ -142,6 +160,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub!; // Adiciona ID na sessão
+        session.user.demo = !!token.demo;
       }
       return session;
     },

@@ -25,7 +25,9 @@ Todas as mutações são Server Actions criadas com `createAction` (`server/lib/
   `{ success: false }` para o cliente. Erros inesperados viram uma mensagem genérica e vão para o log
   com o nome da action.
 - Permissões usam `requireWorkspaceRole(workspaceId, userId, papéis)` (`server/lib/access.ts`).
-- A sessão é lida só em `getSessionUserId()`, o que permite trocá-la nos testes.
+- A sessão é lida só em `getSessionUser()`, o que permite trocá-la nos testes.
+- Sessões da demonstração pública só podem chamar actions de leitura (`DEMO_ALLOWED`); as demais
+  devolvem "demonstração só para leitura" antes de rodar o handler.
 
 Leituras continuam em Server Components chamando os services (ver ADR 005).
 
