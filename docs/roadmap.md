@@ -572,3 +572,9 @@ A API do Claude não tem plano gratuito, mas o custo de um portfólio fica em ce
     transferência de posse e proteção contra sobrescrita em documentos;
   - ordem das tarefas na coluna (3.2) vai junto com o arrastar e soltar (M4);
   - comentários em coleção própria (3.4) vão junto com menções e notificações (M5).
+- **M4 — concluído**: arrastar e soltar com ordem por coluna (3.2 entrou aqui), filtros na URL,
+  busca global com Ctrl K, "Minhas tarefas", tema escuro e páginas de erro e 404. Ajustes:
+  - pelo teclado, mover é feito no menu "Mover para…" (colunas, topo e fim): o sensor de teclado
+    do dnd-kit rola a página em vez de mover quando há rolagem;
+  - filtros sem a biblioteca `nuqs` (URLSearchParams direto) e sem visões salvas;
+  - formulários com react-hook-form (6.1) e atualização otimista fora do quadro (6.2) ficam para o M6.

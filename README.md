@@ -15,6 +15,12 @@ subtarefas e comentários, documentos em árvore e histórico de tudo o que mudo
 - **Workspaces** com papéis Dono, Admin e Membro; convites por e-mail (com ou sem conta), promover,
   remover e transferir a posse.
 - **Projetos** com chave própria (PF, WEB…); o código das tarefas é sequencial por projeto (PF-12).
+- **Arrastar e soltar** no quadro, com a ordem salva por coluna (índice fracionário) e alternativa
+  pelo teclado no menu "Mover para…" de cada card.
+- **Filtros** por texto, responsável, prioridade e tipo, guardados na URL (dá para mandar o link).
+- **Busca global e paleta de comandos** (Ctrl K ou /): tarefas, projetos, documentos e atalhos.
+- **Minhas tarefas:** tudo que está com você em todos os workspaces, agrupado por prazo.
+- **Tema claro e escuro** (ou o do sistema).
 - **Quadro kanban** com colunas configuráveis (nome, ordem e categoria A fazer / Em andamento /
   Concluído), criação rápida em cada coluna e "Mover para…".
 - **Tarefa completa** num painel lateral (ou página própria pelo link): status, prioridade, tipo,
@@ -100,6 +106,7 @@ O seed recusa rodar no banco de produção (`project-flow`).
 | `npm run lint`             | ESLint                                                            |
 | `npm run format`           | Prettier                                                          |
 | `npm run seed`             | dados de demonstração no banco de desenvolvimento                 |
+| `npm run migrate:ranks`    | dá posição na coluna às tarefas antigas (M4)                      |
 | `npm run migrate:statuses` | migra status antigos (texto) para entidade; aceita `-- --dry-run` |
 | `npm run build`            | build de produção                                                 |
 
