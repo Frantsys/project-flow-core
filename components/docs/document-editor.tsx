@@ -10,6 +10,8 @@ import { timeAgo } from "@/lib/history-format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Markdown } from "@/components/markdown";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Breadcrumb,
@@ -57,6 +59,8 @@ export function DocumentEditor({ doc, workspace, ancestors, childCount }: Docume
   const [saved, setSaved] = useState({ title: doc.title, content: doc.content });
   const [error, setError] = useState<string>();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // documento com texto abre para leitura; vazio abre para escrever
+  const [mode, setMode] = useState<"write" | "preview">(doc.content.trim() ? "preview" : "write");
   // versão que outra pessoa salvou enquanto esta estava aberta
   const [conflict, setConflict] = useState<{ title: string; content: string; updatedAt: string } | null>(
     null
@@ -191,16 +195,31 @@ export function DocumentEditor({ doc, workspace, ancestors, childCount }: Docume
             {error}
           </p>
         )}
-        <label htmlFor="doc-content" className="sr-only">
-          Conteúdo
-        </label>
-        <Textarea
-          id="doc-content"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Escreva aqui. Markdown é aceito: # títulos, - listas, **negrito**."
-          className="min-h-[60svh] flex-1 resize-none border-transparent px-1 text-[15px] leading-relaxed shadow-none focus-visible:border-input"
-        />
+        <Tabs value={mode} onValueChange={(v) => setMode(v as "write" | "preview")} className="flex-1 gap-3">
+          <TabsList>
+            <TabsTrigger value="write">Escrever</TabsTrigger>
+            <TabsTrigger value="preview">Visualizar</TabsTrigger>
+          </TabsList>
+          <TabsContent value="write" className="flex flex-col">
+            <label htmlFor="doc-content" className="sr-only">
+              Conteúdo
+            </label>
+            <Textarea
+              id="doc-content"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Escreva aqui. Markdown é aceito: # títulos, - listas, **negrito**, - [ ] tarefas, tabelas."
+              className="min-h-[60svh] flex-1 resize-none border-transparent px-1 text-[15px] leading-relaxed shadow-none focus-visible:border-input"
+            />
+          </TabsContent>
+          <TabsContent value="preview" className="min-h-[60svh] px-1">
+            {content.trim() ? (
+              <Markdown>{content}</Markdown>
+            ) : (
+              <p className="text-sm text-muted-foreground">Nada escrito ainda.</p>
+            )}
+          </TabsContent>
+        </Tabs>
       </article>
 
       <AlertDialog open={!!conflict} onOpenChange={(open) => !open && setConflict(null)}>

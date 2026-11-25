@@ -162,6 +162,8 @@
   --type-bug: #f87171;
   --type-story: #4ade80;
   --type-epic: #a78bfa;
+  /* barras dos relatórios: validado (dataviz) contra a superfície escura #171717 */
+  --chart-1: #4f8ff7;
   --sidebar: #171717;
   --sidebar-foreground: #d4d4d4;
   --sidebar-primary: #e5e5e5;

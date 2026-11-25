@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/item";
 import { UserAvatar } from "@/components/user-avatar";
 import { CreateProjectDialog } from "@/components/projects/create-project-dialog";
+import { OnboardingChecklist } from "@/components/workspaces/onboarding-checklist";
+import { getOnboarding } from "@/server/services/onboarding.service";
 
 export default function WorkspaceOverviewPage({ params }: PageProps<"/w/[workspaceSlug]">) {
   return (
@@ -52,6 +54,8 @@ async function Overview({ params }: { params: Promise<{ workspaceSlug: string }>
   if (!workspace || !projects || !activity) notFound();
 
   const canManage = can(workspace.currentUserRole, "project.manage");
+  // o checklist é de quem monta o workspace (dono e admins)
+  const onboarding = canManage ? await getOnboarding(workspace.id) : null;
   const newProject = canManage ? (
     <CreateProjectDialog
       workspaceId={workspace.id}
@@ -78,6 +82,8 @@ async function Overview({ params }: { params: Promise<{ workspaceSlug: string }>
         </div>
         {newProject}
       </div>
+
+      {onboarding && <OnboardingChecklist steps={onboarding} workspaceSlug={workspace.slug} />}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-base font-semibold">Projetos</h2>
