@@ -48,6 +48,34 @@ export function LoginForm() {
     urlError ? (URL_ERRORS[urlError] ?? "Não foi possível entrar. Tente novamente.") : null
   );
   const [pending, setPending] = useState(false);
+  // segundo passo: a senha estava certa e a conta tem verificação em duas etapas
+  const [pendingLogin, setPendingLogin] = useState<{ email: string; password: string } | null>(null);
+  const [code, setCode] = useState("");
+
+  /** Tenta entrar; devolve true se entrou. Trata os erros que o authorize pode mandar. */
+  async function attempt(data: { email: string; password: string; code?: string }) {
+    setFormError(null);
+    setPending(true);
+    const result = await signIn("credentials", { ...data, redirect: false });
+
+    if (result && !result.error) {
+      router.push(callbackUrl);
+      router.refresh();
+      return;
+    }
+    setPending(false);
+    const error = result?.error ?? "";
+    if (error === "TWO_FACTOR_REQUIRED") {
+      setPendingLogin({ email: data.email, password: data.password });
+      return;
+    }
+    // limite de tentativas e código errado têm mensagem própria; o resto é genérico
+    setFormError(
+      error.startsWith("Muitas tentativas") || error.startsWith("Código de verificação")
+        ? error
+        : WRONG_CREDENTIALS
+    );
+  }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,20 +88,59 @@ export function LoginForm() {
     }
 
     setFieldErrors({});
-    setFormError(null);
-    setPending(true);
+    await attempt(parsed.data);
+  }
 
-    const result = await signIn("credentials", { ...parsed.data, redirect: false });
-
-    if (!result || result.error) {
-      setPending(false);
-      // o authorize devolve a mensagem do limite de tentativas; qualquer outro erro é genérico
-      setFormError(result?.error?.startsWith("Muitas tentativas") ? result.error : WRONG_CREDENTIALS);
-      return;
-    }
-
-    router.push(callbackUrl);
-    router.refresh();
+  if (pendingLogin) {
+    return (
+      <form
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (code.trim()) void attempt({ ...pendingLogin, code: code.trim() });
+        }}
+      >
+        <FieldGroup>
+          <div className="flex flex-col gap-1.5 text-center">
+            <h1 className="text-2xl font-semibold tracking-tight">Verificação em duas etapas</h1>
+            <p className="text-sm text-muted-foreground">
+              Digite o código de 6 dígitos do seu aplicativo autenticador, ou um código de recuperação.
+            </p>
+          </div>
+          <Field data-invalid={!!formError}>
+            <FieldLabel htmlFor="code">Código</FieldLabel>
+            <Input
+              id="code"
+              name="code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoFocus
+              aria-invalid={!!formError}
+            />
+            <FieldError>{formError}</FieldError>
+          </Field>
+          <Field>
+            <Button type="submit" disabled={pending || !code.trim()}>
+              {pending && <Spinner />}
+              {pending ? "Verificando…" : "Verificar e entrar"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setPendingLogin(null);
+                setCode("");
+                setFormError(null);
+              }}
+            >
+              Voltar
+            </Button>
+          </Field>
+        </FieldGroup>
+      </form>
+    );
   }
 
   return (

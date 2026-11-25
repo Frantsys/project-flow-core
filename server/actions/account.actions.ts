@@ -10,6 +10,17 @@ import { enforceRateLimit } from "../lib/rate-limit";
 import { accountsCollection } from "../services/account.service";
 import { changePasswordSchema, deleteAccountSchema, updateProfileSchema } from "../schemas";
 import { z } from "zod";
+import QRCode from "qrcode";
+import {
+  decryptSecret,
+  encryptSecret,
+  generateRecoveryCodes,
+  generateSecret,
+  hashRecoveryCode,
+  otpauthUrl,
+  verifyTotp,
+} from "../lib/totp";
+import { checkSecondFactor } from "../lib/two-factor";
 
 export const updateProfileAction = createAction({
   name: "account.updateProfile",
@@ -89,5 +100,83 @@ export const deleteAccountAction = createAction({
       await session.endSession();
     }
     return { deleted: true };
+  },
+});
+
+const twoFactorCodeSchema = z.object({
+  code: z.string().trim().min(6, "Digite o código de 6 dígitos.").max(20, "Código inválido."),
+});
+
+/** Passo 1: gera o segredo (ainda pendente) e o QR code para o aplicativo autenticador. */
+export const startTwoFactorAction = createAction({
+  name: "account.twoFactor.start",
+  schema: z.object({}),
+  handler: async (_input, { userId }) => {
+    await enforceRateLimit(`2fa-setup:${userId}`, 10, 3_600_000);
+    await dbConnect();
+    const user = await User.findById(userId).select("email twoFactorEnabled").lean();
+    if (!user) fail("Conta não encontrada.");
+    if (user.twoFactorEnabled) fail("A verificação em duas etapas já está ligada.");
+
+    const secret = generateSecret();
+    await User.updateOne({ _id: userId }, { $set: { twoFactorPendingSecret: encryptSecret(secret) } });
+    const qr = await QRCode.toDataURL(otpauthUrl(secret, user.email), { margin: 1, width: 220 });
+    return { qr, secret };
+  },
+});
+
+/** Passo 2: confere o primeiro código, liga a proteção e devolve os códigos de recuperação (uma vez). */
+export const confirmTwoFactorAction = createAction({
+  name: "account.twoFactor.confirm",
+  schema: twoFactorCodeSchema,
+  handler: async ({ code }, { userId }) => {
+    await enforceRateLimit(`2fa-confirm:${userId}`, 10, 15 * 60_000);
+    await dbConnect();
+    const user = await User.findById(userId).select("+twoFactorPendingSecret twoFactorEnabled").lean();
+    if (!user?.twoFactorPendingSecret) fail("Comece a configuração de novo.");
+    const step = verifyTotp(decryptSecret(user.twoFactorPendingSecret), code);
+    if (step === null)
+      fail("Código incorreto. Confira o horário do celular e tente de novo.", {
+        code: ["Código incorreto."],
+      });
+
+    const recoveryCodes = generateRecoveryCodes();
+    await User.updateOne(
+      { _id: userId },
+      {
+        $set: {
+          twoFactorEnabled: true,
+          twoFactorSecret: user.twoFactorPendingSecret,
+          twoFactorPendingSecret: null,
+          twoFactorLastStep: step,
+          recoveryCodes: recoveryCodes.map(hashRecoveryCode),
+        },
+      }
+    );
+    return { recoveryCodes };
+  },
+});
+
+/** Desliga a proteção; exige um código válido (do aplicativo ou de recuperação). */
+export const disableTwoFactorAction = createAction({
+  name: "account.twoFactor.disable",
+  schema: twoFactorCodeSchema,
+  handler: async ({ code }, { userId }) => {
+    await enforceRateLimit(`2fa-disable:${userId}`, 10, 15 * 60_000);
+    await dbConnect();
+    if (!(await checkSecondFactor(userId, code))) fail("Código incorreto.", { code: ["Código incorreto."] });
+    await User.updateOne(
+      { _id: userId },
+      {
+        $set: {
+          twoFactorEnabled: false,
+          twoFactorSecret: null,
+          twoFactorPendingSecret: null,
+          twoFactorLastStep: 0,
+          recoveryCodes: [],
+        },
+      }
+    );
+    return { disabled: true };
   },
 });

@@ -15,6 +15,7 @@ import {
 } from "@/server/actions/account.actions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { TwoFactorCard } from "./two-factor-card";
 import { changePasswordSchema } from "@/server/schemas";
 import type { AccountDTO } from "@/server/services/account.service";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +50,10 @@ export function AccountSettings({ account }: { account: AccountDTO }) {
         <EmailCard email={account.email} verified={account.emailVerified} />
         <NotificationsCard notifyByEmail={account.notifyByEmail} />
         <PasswordCard email={account.email} hasPassword={account.hasPassword} />
+        {/* a verificação em duas etapas protege o login com senha; sem senha não há o que proteger */}
+        {account.hasPassword && (
+          <TwoFactorCard enabled={account.twoFactorEnabled} recoveryCodesLeft={account.recoveryCodesLeft} />
+        )}
         <ProvidersCard providers={account.providers} />
         <DeleteAccountCard email={account.email} ownedWorkspaces={account.ownedWorkspaces} />
       </div>

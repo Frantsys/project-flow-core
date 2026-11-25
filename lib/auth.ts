@@ -9,6 +9,9 @@ import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import { MongoClient } from "mongodb";
 import { fetchGitHubEmails, isVerifiedOAuthEmail } from "./oauth-email";
 import { ipFrom, rateLimit, tooManyAttemptsMessage } from "@/server/lib/rate-limit";
+import { checkSecondFactor } from "@/server/lib/two-factor";
+
+export const TWO_FACTOR_REQUIRED = "TWO_FACTOR_REQUIRED";
 
 /**
  *  Cliente próprio do driver `mongodb` para o adapter do NextAuth.
@@ -65,6 +68,8 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "text" },
         password: { label: "Senha", type: "password" },
+        // segundo passo do login, só para contas com verificação em duas etapas
+        code: { label: "Código", type: "text" },
       },
 
       async authorize(credentials, req) {
@@ -90,6 +95,14 @@ export const authOptions: NextAuthOptions = {
 
         const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
         if (!isValid) throw new Error("Credenciais incorretas.");
+
+        if (user.twoFactorEnabled) {
+          // o formulário mostra o campo do código ao receber este erro e envia tudo de novo
+          if (!credentials.code) throw new Error(TWO_FACTOR_REQUIRED);
+          if (!(await checkSecondFactor(user._id, credentials.code))) {
+            throw new Error("Código de verificação incorreto.");
+          }
+        }
 
         return { id: user._id.toString(), email: user.email, name: user.username };
       },

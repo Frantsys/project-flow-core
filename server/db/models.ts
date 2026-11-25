@@ -14,6 +14,15 @@ export interface IUser extends Document {
   passwordHash?: string | null;
   /** Recebe por e-mail as notificações de atribuição e menção. */
   notifyByEmail: boolean;
+  /** Verificação em duas etapas (só para login com e-mail e senha). */
+  twoFactorEnabled: boolean;
+  /** Segredo TOTP criptografado (server/lib/totp.ts); o pendente é o da configuração em andamento. */
+  twoFactorSecret?: string | null;
+  twoFactorPendingSecret?: string | null;
+  /** Último passo de tempo aceito: impede reutilizar o mesmo código. */
+  twoFactorLastStep: number;
+  /** Hashes dos códigos de recuperação ainda não usados. */
+  recoveryCodes: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,6 +36,11 @@ const UserSchema = new Schema<IUser>(
 
     passwordHash: { type: String, select: false },
     notifyByEmail: { type: Boolean, default: true },
+    twoFactorEnabled: { type: Boolean, default: false },
+    twoFactorSecret: { type: String, default: null, select: false },
+    twoFactorPendingSecret: { type: String, default: null, select: false },
+    twoFactorLastStep: { type: Number, default: 0, select: false },
+    recoveryCodes: { type: [String], default: [], select: false },
   },
   { timestamps: true }
 );
@@ -478,3 +492,31 @@ NotificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 3600 
 
 export const Notification: Model<INotification> =
   mongoose.models.Notification || mongoose.model<INotification>("Notification", NotificationSchema);
+
+/** Token da API pública (/api/v1): dá leitura aos projetos e tarefas de um workspace. Só o hash é guardado. */
+export interface IApiToken {
+  _id: Types.ObjectId;
+  workspaceId: Types.ObjectId;
+  name: string;
+  tokenHash: string;
+  /** Começo do token ("pf_ab12…"), para reconhecer na lista sem expor o resto. */
+  prefix: string;
+  createdBy: Types.ObjectId;
+  lastUsedAt: Date | null;
+  createdAt: Date;
+}
+
+const ApiTokenSchema = new Schema<IApiToken>(
+  {
+    workspaceId: { type: Schema.Types.ObjectId, ref: "Workspace", required: true, index: true },
+    name: { type: String, required: true, trim: true, maxlength: 60 },
+    tokenHash: { type: String, required: true, unique: true },
+    prefix: { type: String, required: true },
+    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    lastUsedAt: { type: Date, default: null },
+  },
+  { timestamps: { createdAt: true, updatedAt: false }, versionKey: false }
+);
+
+export const ApiToken: Model<IApiToken> =
+  mongoose.models.ApiToken || mongoose.model<IApiToken>("ApiToken", ApiTokenSchema);
