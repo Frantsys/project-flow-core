@@ -57,20 +57,29 @@ export function DocumentEditor({ doc, workspace, ancestors, childCount }: Docume
   const [saved, setSaved] = useState({ title: doc.title, content: doc.content });
   const [error, setError] = useState<string>();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // versão que outra pessoa salvou enquanto esta estava aberta
+  const [conflict, setConflict] = useState<{ title: string; content: string; updatedAt: string } | null>(
+    null
+  );
   const [pending, startTransition] = useTransition();
 
   const dirty = title !== saved.title || content !== saved.content;
 
-  function save() {
+  function save(baseUpdatedAt = savedAt) {
     if (!dirty || pending) return;
     startTransition(async () => {
       const result = await updateDocumentAction({
         documentId: doc.id,
         title: title.trim() || "Sem título",
         content,
+        baseUpdatedAt,
       });
       if (!result.success) {
         setError(result.fieldErrors?.title?.[0] ?? result.error);
+        return;
+      }
+      if (!result.data.saved) {
+        setConflict(result.data.current);
         return;
       }
       setError(undefined);
@@ -135,7 +144,7 @@ export function DocumentEditor({ doc, workspace, ancestors, childCount }: Docume
             </>
           )}
         </span>
-        <Button size="sm" onClick={save} disabled={!dirty || pending}>
+        <Button size="sm" onClick={() => save()} disabled={!dirty || pending}>
           Salvar
         </Button>
         <DropdownMenu>
@@ -193,6 +202,45 @@ export function DocumentEditor({ doc, workspace, ancestors, childCount }: Docume
           className="min-h-[60svh] flex-1 resize-none border-transparent px-1 text-[15px] leading-relaxed shadow-none focus-visible:border-input"
         />
       </article>
+
+      <AlertDialog open={!!conflict} onOpenChange={(open) => !open && setConflict(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Alguém editou este documento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Outra pessoa salvou uma versão {conflict ? timeAgo(conflict.updatedAt) : ""}, depois que você
+              abriu o documento. Escolha qual versão fica.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={async () => {
+                if (!conflict) return;
+                // a sua versão não se perde: vai para a área de transferência
+                await navigator.clipboard?.writeText(content).catch(() => {});
+                setTitle(conflict.title);
+                setContent(conflict.content);
+                setSaved({ title: conflict.title, content: conflict.content });
+                setSavedAt(conflict.updatedAt);
+                setConflict(null);
+                toast.info("Carregamos a versão mais recente. O seu texto foi copiado.");
+              }}
+            >
+              Usar a versão mais recente
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                const base = conflict?.updatedAt;
+                setConflict(null);
+                if (base) save(base);
+              }}
+            >
+              Manter a minha
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>

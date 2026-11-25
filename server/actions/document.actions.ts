@@ -76,16 +76,30 @@ export const createDocumentAction = createAction({
 export const updateDocumentAction = createAction({
   name: "document.update",
   schema: updateDocumentSchema,
-  handler: async ({ documentId, title, content }, { userId }) => {
+  handler: async ({ documentId, title, content, baseUpdatedAt }, { userId }) => {
     const { doc, role } = await loadDocument(documentId, userId);
 
-    const updated = await DocumentModel.findByIdAndUpdate(
-      documentId,
+    // só grava se ninguém salvou depois que a pessoa abriu: o último a salvar não apaga o outro
+    const updated = await DocumentModel.findOneAndUpdate(
+      { _id: documentId, updatedAt: new Date(baseUpdatedAt) },
       { $set: { title, content } },
       { returnDocument: "after", runValidators: true }
     )
       .select("updatedAt")
       .lean<{ updatedAt: Date }>();
+
+    if (!updated) {
+      const current = await DocumentModel.findById(documentId).select("title content updatedAt").lean();
+      if (!current) fail("Documento não encontrado.");
+      return {
+        saved: false as const,
+        current: {
+          title: current.title,
+          content: current.content,
+          updatedAt: current.updatedAt.toISOString(),
+        },
+      };
+    }
 
     await recordHistory({
       workspaceId: doc.workspaceId,
@@ -102,7 +116,7 @@ export const updateDocumentAction = createAction({
     });
 
     revalidateDocs();
-    return { updatedAt: new Date(updated?.updatedAt ?? Date.now()).toISOString() };
+    return { saved: true as const, updatedAt: updated.updatedAt.toISOString() };
   },
 });
 
