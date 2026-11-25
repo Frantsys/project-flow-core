@@ -34,5 +34,6 @@ export async function proxy(req: NextRequest) {
 // Impede que o proxy.ts atue em rotas de api ou em arquivos estáticos
 // Isso implica que toda e qualquer rota ainda deve chamar getServerSession(authOptions) para verificar as permissões de acesso
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  // manifesto e ícones do PWA são públicos: o navegador os busca sem sessão
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon.svg|icons/).*)"],
 };

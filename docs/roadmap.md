@@ -584,3 +584,9 @@ A API do Claude não tem plano gratuito, mas o custo de um portfólio fica em ce
     de novo quando a pessoa volta para a aba.
   - Anexos (3.5) dependem de um Blob store na Vercel; etiquetas (3.5) e aviso de prazo por cron
     (2.6) ficam para a próxima rodada.
+- **M6 — parcial**: lista e calendário (4.6), relatórios (4.7), Markdown renderizado nos documentos
+  (parte de 4.8), primeiros passos (4.10) e PWA (6.7). Corrigido também um erro de hidratação da
+  barra lateral no celular. Ficam para depois:
+  - roadmap de épicos (4.6 + 3.3), templates (4.9), lixeira (6.3) e editor rico Tiptap (4.8);
+  - burndown, que precisa de snapshots diários por cron (2.6);
+  - os gráficos são HTML e CSS, sem biblioteca: uma série por gráfico, cor validada nos dois temas.

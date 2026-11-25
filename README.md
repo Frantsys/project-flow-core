@@ -24,6 +24,12 @@ subtarefas e comentários, documentos em árvore e histórico de tudo o que mudo
 - **Notificações:** sino com contador e caixa de entrada para atribuições, menções (@Nome) e
   comentários nas tarefas que você criou, recebeu ou comentou; e-mail opcional para atribuição e menção.
 - **Comentários** editáveis, com @menções destacadas.
+- **Outras visões do projeto:** lista ordenável por qualquer coluna, calendário por prazo (agenda no
+  celular) e relatórios com tarefas por status, velocidade das sprints, progresso da sprint ativa,
+  carga por responsável e por prioridade.
+- **Documentos em Markdown** com abas Escrever e Visualizar (tabelas, checklists, código).
+- **Primeiros passos** na visão geral do workspace, até o time estar configurado.
+- **Instalável (PWA)** no celular e no computador.
 - **Quadro kanban** com colunas configuráveis (nome, ordem e categoria A fazer / Em andamento /
   Concluído), criação rápida em cada coluna e "Mover para…".
 - **Tarefa completa** num painel lateral (ou página própria pelo link): status, prioridade, tipo,
