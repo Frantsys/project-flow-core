@@ -14,7 +14,8 @@ export default function WorkspaceLayout({ children, params }: LayoutProps<"/w/[w
       <Suspense fallback={<SidebarSkeleton />}>
         <WorkspaceSidebar params={params} />
       </Suspense>
-      <SidebarInset>
+      {/* min-w-0: sem isso o quadro largo estica a página inteira em vez de rolar dentro dele */}
+      <SidebarInset className="min-w-0">
         <header className="flex h-12 items-center gap-2 border-b px-4 md:hidden">
           <SidebarTrigger aria-label="Abrir menu" />
           <Logo />

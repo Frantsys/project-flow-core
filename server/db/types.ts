@@ -75,6 +75,7 @@ export interface TaskDTO {
   title: string;
   type: TaskType;
   statusId: string; // coluna do quadro: id de um item de project.statuses
+  rank: string; // posição na coluna
   priority: TaskPriority;
   storyPoints: number | null;
   dueDate: string | null;

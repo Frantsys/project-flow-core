@@ -3,8 +3,8 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, Ellipsis } from "lucide-react";
-import { updateTaskStatusAction } from "@/server/actions/task.actions";
+import { ArrowDownToLine, ArrowUpToLine, Check, Ellipsis } from "lucide-react";
+import { moveTaskAction, updateTaskStatusAction } from "@/server/actions/task.actions";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import type { StatusDTO } from "@/server/db/types";
@@ -13,6 +13,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -22,11 +23,14 @@ export function TaskStatusMenu({
   taskCode,
   statusId,
   statuses,
+  canReorder = false,
 }: {
   taskId: string;
   taskCode: string;
   statusId: string;
   statuses: StatusDTO[];
+  /** Mostra "Topo/Fim da coluna": a alternativa de teclado ao arrastar no quadro. */
+  canReorder?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -40,6 +44,15 @@ export function TaskStatusMenu({
         return;
       }
       toast.success(`${taskCode} movida para ${next.name}.`);
+      router.refresh();
+    });
+  }
+
+  function reorder(toEnd: boolean) {
+    startTransition(async () => {
+      const result = await moveTaskAction({ taskId, statusId, afterTaskId: null, toEnd });
+      if (!result.success) return void toast.error(result.error);
+      toast.success(`${taskCode} foi para o ${toEnd ? "fim" : "topo"} da coluna.`);
       router.refresh();
     });
   }
@@ -59,6 +72,19 @@ export function TaskStatusMenu({
             {s.id === statusId && <Check aria-label="Status atual" />}
           </DropdownMenuItem>
         ))}
+        {canReorder && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => reorder(false)}>
+              <ArrowUpToLine aria-hidden="true" />
+              Topo da coluna
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => reorder(true)}>
+              <ArrowDownToLine aria-hidden="true" />
+              Fim da coluna
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

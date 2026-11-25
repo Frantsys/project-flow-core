@@ -93,6 +93,7 @@ interface PopulatedTaskLean {
   title: string;
   type: TaskType;
   statusId: Types.ObjectId;
+  rank?: string;
   priority: TaskPriority;
   storyPoints?: number | null;
   dueDate?: Date | null;
@@ -151,10 +152,10 @@ export async function getProjectByKey(
   // 3. Carrega tasks (com sprint e assignee populados) e sprints em paralelo
   const [rawTasks, rawSprints] = await Promise.all([
     Task.find({ projectId: project._id })
-      .select("_id code title type statusId priority storyPoints dueDate sprintId assigneeId")
+      .select("_id code title type statusId rank priority storyPoints dueDate sprintId assigneeId")
       .populate("sprintId", "name")
       .populate("assigneeId", "username image")
-      .sort({ createdAt: 1 })
+      .sort({ rank: 1, createdAt: 1 })
       .lean<PopulatedTaskLean[]>(),
 
     Sprint.find({ projectId: project._id })
@@ -169,6 +170,7 @@ export async function getProjectByKey(
     title: task.title,
     type: task.type,
     statusId: task.statusId.toString(),
+    rank: task.rank ?? "",
     priority: task.priority,
     storyPoints: task.storyPoints ?? null,
     dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,

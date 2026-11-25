@@ -18,6 +18,7 @@ interface TaskDetailLean {
   description?: string;
   type: TaskType;
   statusId: Types.ObjectId;
+  rank?: string;
   priority: TaskPriority;
   storyPoints?: number | null;
   tags?: string[];
@@ -83,6 +84,7 @@ export async function getTaskDetail(
     description: task.description ?? "",
     type: task.type,
     statusId: task.statusId.toString(),
+    rank: task.rank ?? "",
     priority: task.priority,
     storyPoints: task.storyPoints ?? null,
     dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,

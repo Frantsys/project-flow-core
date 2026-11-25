@@ -193,6 +193,8 @@ export interface ITask extends Document {
   type: TaskType;
   /** _id de um item de Project.statuses: renomear o status não mexe nas tarefas. */
   statusId: Types.ObjectId;
+  /** Posição na coluna (índice fracionário, comparado como texto): ver server/lib/rank.ts. */
+  rank: string;
   priority: TaskPriority;
   storyPoints?: number | null;
   tags: string[];
@@ -232,6 +234,7 @@ const TaskSchema = new Schema<ITask>(
       default: "TASK",
     },
     statusId: { type: Schema.Types.ObjectId, required: true },
+    rank: { type: String, default: "" },
     priority: {
       type: String,
       enum: ["LOW", "MEDIUM", "HIGH", "URGENT"],
@@ -248,7 +251,7 @@ const TaskSchema = new Schema<ITask>(
 );
 
 TaskSchema.index({ projectId: 1, code: 1 }, { unique: true });
-TaskSchema.index({ projectId: 1, statusId: 1 });
+TaskSchema.index({ projectId: 1, statusId: 1, rank: 1 });
 
 export const Task: Model<ITask> = mongoose.models.Task || mongoose.model<ITask>("Task", TaskSchema);
 

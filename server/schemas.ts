@@ -346,3 +346,12 @@ export const invitationRefSchema = z.object({
 });
 
 export const acceptInvitationSchema = z.object({ token: z.string().min(1, "Convite inválido.") });
+
+export const moveTaskSchema = z.object({
+  taskId: z.string().regex(objectIdRegex, "ID de tarefa inválido."),
+  statusId: z.string().regex(objectIdRegex, "Status inválido."),
+  // tarefa logo acima na coluna de destino; null = topo
+  afterTaskId: z.string().regex(objectIdRegex, "ID inválido.").nullable().optional(),
+  // vai para o fim da coluna (ignora afterTaskId)
+  toEnd: z.boolean().optional(),
+});

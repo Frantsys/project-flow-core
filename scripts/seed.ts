@@ -10,6 +10,7 @@ import bcrypt from "bcryptjs";
 import mongoose, { Types } from "mongoose";
 import dbConnect, { DB_NAME } from "@/lib/db";
 import { ChangeHistory, DocumentModel, Project, Sprint, Task, User, Workspace } from "@/server/db/models";
+import { backfillRanks } from "@/server/lib/rank";
 
 const PRODUCTION_DB = "project-flow";
 const SLUG = "acme-labs-demo";
@@ -235,6 +236,7 @@ async function main() {
       };
     });
     await Task.insertMany(tasks);
+    await backfillRanks(project._id, statuses);
     await Project.updateOne({ _id: project._id }, { $set: { taskSequence: tasks.length } });
     taskCount += tasks.length;
 

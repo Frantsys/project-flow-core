@@ -8,6 +8,7 @@ import { createAction, fail } from "../lib/action";
 import { can } from "@/lib/permissions";
 import { requirePermission } from "../lib/access";
 import { recordHistory } from "../services/history.service";
+import { placeTask, rankAtEnd } from "../lib/rank";
 import {
   addCommentSchema,
   addSubtaskSchema,
@@ -17,6 +18,7 @@ import {
   taskIdSchema,
   updateTaskSchema,
   updateTaskStatusSchema,
+  moveTaskSchema,
 } from "../schemas";
 
 interface ProjectForTaskLean {
@@ -144,6 +146,7 @@ export const createTaskAction = createAction({
       type,
       priority,
       statusId: status._id,
+      rank: await rankAtEnd(project._id, status._id),
       storyPoints: storyPoints ?? null,
       dueDate: dueDate ? toDate(dueDate) : null,
     });
@@ -211,6 +214,8 @@ export const updateTaskAction = createAction({
         current?.name ?? null,
         next.name,
       ]);
+      // trocou de coluna pelo menu ou pelo painel: entra no fim da nova coluna
+      if (set.statusId) set.rank = await rankAtEnd(project._id, next._id);
     }
     if (data.dueDate !== undefined) {
       const oldDue = dateOnly(task.dueDate);
@@ -274,6 +279,40 @@ export const updateTaskStatusAction = createAction({
     const result = await updateTaskAction({ taskId, statusId });
     if (!result.success) fail(result.error, result.fieldErrors);
     return { id: taskId, statusId };
+  },
+});
+
+/**
+ * Arrastar e soltar: põe a tarefa na coluna `statusId`, logo abaixo de `afterTaskId`
+ * (null = topo). Mudança de coluna entra no histórico como mudança de status.
+ */
+export const moveTaskAction = createAction({
+  name: "task.move",
+  schema: moveTaskSchema,
+  handler: async ({ taskId, statusId, afterTaskId, toEnd }, { userId }) => {
+    const { task, project, history } = await loadTask(taskId, userId);
+    const next = findStatus(project, statusId);
+    if (!next) fail("Status inválido para este projeto.");
+    if (afterTaskId === taskId) fail("Posição inválida.");
+
+    if (task.statusId.toString() !== statusId) {
+      await Task.updateOne({ _id: task._id }, { $set: { statusId: next._id } });
+      await history("MODIFY", "TASK", {
+        field: "status",
+        oldValue: findStatus(project, task.statusId.toString())?.name ?? null,
+        newValue: next.name,
+      });
+    }
+    let rank: string;
+    if (toEnd) {
+      rank = await rankAtEnd(project._id, next._id);
+      await Task.updateOne({ _id: task._id }, { $set: { rank } });
+    } else {
+      rank = await placeTask(task, next._id, afterTaskId ?? null);
+    }
+
+    revalidateProjectPages();
+    return { id: taskId, statusId, rank };
   },
 });
 
