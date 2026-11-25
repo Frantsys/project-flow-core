@@ -178,8 +178,10 @@ function Sidebar({
     )
   }
 
-  if (isMobile) {
-    return (
+  // Project Flow: a versão desktop sempre é renderizada (no celular o CSS esconde, "hidden md:block")
+  // e o Sheet entra ao lado dela. Trocar uma pela outra quebrava a hidratação no celular: a sidebar
+  // chega por streaming e hidrata depois do provider, que já sabe que é celular.
+  const mobileSheet = isMobile && (
       <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
         <SheetContent
           dir={dir}
@@ -201,10 +203,10 @@ function Sidebar({
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>
       </Sheet>
-    )
-  }
+  )
 
   return (
+    <>
     <div
       className="group peer hidden text-sidebar-foreground md:block"
       data-state={state}
@@ -247,6 +249,8 @@ function Sidebar({
         </div>
       </div>
     </div>
+    {mobileSheet}
+    </>
   )
 }
 
