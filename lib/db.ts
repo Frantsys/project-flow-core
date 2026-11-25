@@ -11,6 +11,8 @@ import mongoose from "mongoose";
 
 const MONGODB_URI = process.env.MONGODB_URI!;
 
+export const DB_NAME = process.env.MONGODB_DB || "project-flow";
+
 if (!MONGODB_URI ) throw new Error ("Defina MONGODB_URI no .env.local (local) ou nas Environment Variables da Vercel.");
 
 interface MongooseCache {
@@ -31,7 +33,7 @@ async function dbConnect () {
         cached.promise = mongoose.connect(MONGODB_URI, {
             bufferCommands: false,
             // A URI criada pela integração Vercel + Atlas não traz o nome do banco; sem isto o Mongo usaria "test"
-            dbName: process.env.MONGODB_DB || "project-flow",
+            dbName: DB_NAME,
             // Funções serverless rodam muitas instâncias em paralelo: um pool pequeno por instância
             // evita estourar o limite de conexões do cluster (o M0 gratuito aceita 500)
             maxPoolSize: 10,
