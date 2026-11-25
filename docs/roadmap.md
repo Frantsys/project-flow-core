@@ -590,3 +590,8 @@ A API do Claude não tem plano gratuito, mas o custo de um portfólio fica em ce
   - roadmap de épicos (4.6 + 3.3), templates (4.9), lixeira (6.3) e editor rico Tiptap (4.8);
   - burndown, que precisa de snapshots diários por cron (2.6);
   - os gráficos são HTML e CSS, sem biblioteca: uma série por gráfico, cor validada nos dois temas.
+- **M7 — parcial**: página inicial pública, modo demonstração só leitura (botão "Ver demonstração"),
+  SEO (metadados, imagem de compartilhamento, sitemap, robots), termos e privacidade, `/api/health`,
+  Vercel Web Analytics e Speed Insights. Ficam para depois:
+  - Sentry e envio de logs (precisam de conta), cache com tags (2.4) e jobs agendados (2.6);
+  - changelog público e página de status (o monitor pode usar `/api/health`).

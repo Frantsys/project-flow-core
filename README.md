@@ -3,7 +3,8 @@
 Gestor de projetos para times pequenos: workspaces, quadro kanban, backlog com sprints, tarefas com
 subtarefas e comentários, documentos em árvore e histórico de tudo o que mudou.
 
-**Produção:** https://project-flow-core.vercel.app
+**Produção:** https://project-flow-core.vercel.app · clique em **Ver demonstração** para abrir um
+workspace de exemplo sem cadastro (só leitura).
 
 ## Funcionalidades
 
@@ -30,6 +31,8 @@ subtarefas e comentários, documentos em árvore e histórico de tudo o que mudo
 - **Documentos em Markdown** com abas Escrever e Visualizar (tabelas, checklists, código).
 - **Primeiros passos** na visão geral do workspace, até o time estar configurado.
 - **Instalável (PWA)** no celular e no computador.
+- **Página inicial pública**, termos de uso, política de privacidade (LGPD), imagem de compartilhamento,
+  sitemap e `/api/health` para monitores de disponibilidade.
 - **Quadro kanban** com colunas configuráveis (nome, ordem e categoria A fazer / Em andamento /
   Concluído), criação rápida em cada coluna e "Mover para…".
 - **Tarefa completa** num painel lateral (ou página própria pelo link): status, prioridade, tipo,
