@@ -5,6 +5,8 @@ import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CommandMenu } from "@/components/command-menu";
 import { Toaster } from "@/components/ui/sonner";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,9 +19,25 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = process.env.NEXTAUTH_URL || "https://project-flow-core.vercel.app";
+const DESCRIPTION =
+  "Gestão de projetos para times pequenos: quadro kanban, sprints, relatórios e documentos no mesmo lugar.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: { default: "Project Flow", template: "%s · Project Flow" },
-  description: "Workspaces, quadro kanban, sprints e documentos para times pequenos.",
+  description: DESCRIPTION,
+  applicationName: "Project Flow",
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    siteName: "Project Flow",
+    title: "Project Flow",
+    description: DESCRIPTION,
+  },
+  twitter: { card: "summary_large_image", title: "Project Flow", description: DESCRIPTION },
+  // telas do app são privadas: só a página inicial e os textos legais entram em buscadores
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -38,6 +56,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <CommandMenu />
           </Suspense>
           <Toaster />
+          {/* sem cookies e sem identificar a pessoa; só coletam na Vercel, com o recurso ligado no painel */}
+          <Analytics />
+          <SpeedInsights />
         </ThemeProvider>
       </body>
     </html>
