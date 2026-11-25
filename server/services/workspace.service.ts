@@ -1,8 +1,8 @@
 import "server-only";
-import { Project, Workspace, WorkspaceRole } from "../db/models";
+import { ChangeHistory, DocumentModel, Project, Sprint, Task, Workspace, WorkspaceRole } from "../db/models";
 import dbConnect from "@/lib/db";
 import { WorkspaceDTO, WorkspaceMemberDTO, WorkspaceProjectSummaryDTO, WorkspaceSummaryDTO } from "../db/types";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { UpdateWorkspaceInput } from "../schemas";
 import { ActionResult } from "@/types";
 import { verifyWorkspacePermission } from "./permission.service";
@@ -55,7 +55,7 @@ export async function getUserWorkspaces(
  */
 
 interface PopulateUserLean {
-  _id: string
+  _id: Types.ObjectId
   username: string
   email: string
   image?: string | null
@@ -104,19 +104,19 @@ export async function getWorkspaceBySlug(
     return null;
   }
 
-  const members: WorkspaceMemberDTO[] = workspace?.members
+  const members: WorkspaceMemberDTO[] = workspace.members
   .filter((m): m is PopulateWorkspaceMemberLean & { userId: PopulateUserLean } => Boolean(m.userId))
   .map((member) => {
     return {
-      id: member.userId._id,
+      // o lean devolve ObjectId: sem toString a comparação com o userId (texto) nunca batia
+      id: member.userId._id.toString(),
       name: member.userId.username,
       email: member.userId.email,
       image: member.userId.image,
       role: member.role,
       joinedAt: new Date(member.joinedAt).toISOString(),
-      
     }
-  })!;
+  });
 
   const currentMember = members.find((member) => member.id === userId);
   if (!currentMember) {
@@ -227,16 +227,32 @@ export async function deleteWorkspace(
 
   await dbConnect();
 
-  const deleted = await Workspace.findByIdAndDelete(workspaceId)
-    .lean<{ id: string, name: string }>()
+  const workspace = await Workspace.findById(workspaceId).select("_id name").lean<{ _id: Types.ObjectId; name: string }>();
+  if (!workspace) return { success: false, error: "Workspace não encontrado." };
 
-  if (!deleted) return { success: false, error: "Erro ao excluir workspace" };
+  const projectIds = (await Project.find({ workspaceId }).select("_id").lean<{ _id: Types.ObjectId }[]>()).map((p) => p._id);
+
+  // O Mongo não tem exclusão em cascata: apaga tudo que pertence ao workspace numa transação,
+  // para não sobrar projeto, tarefa ou documento órfão se algo falhar no meio
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      await Task.deleteMany({ projectId: { $in: projectIds } }, { session });
+      await Sprint.deleteMany({ projectId: { $in: projectIds } }, { session });
+      await DocumentModel.deleteMany({ workspaceId }, { session });
+      await ChangeHistory.deleteMany({ workspaceId }, { session });
+      await Project.deleteMany({ workspaceId }, { session });
+      await Workspace.deleteOne({ _id: workspaceId }, { session });
+    });
+  } finally {
+    await session.endSession();
+  }
 
   return {
     success: true,
     data: {
-      id: deleted.id,
-      name: deleted.name
+      id: workspace._id.toString(),
+      name: workspace.name
     }
   }
   
