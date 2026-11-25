@@ -16,10 +16,23 @@ import { OAuthButtons } from "./oauth-buttons";
 type FieldName = "username" | "email" | "password" | "confirmPassword";
 type Errors = Partial<Record<FieldName, string>>;
 
-const FIELDS: { name: FieldName; label: string; type: string; autoComplete: string; placeholder?: string; help?: string }[] = [
+const FIELDS: {
+  name: FieldName;
+  label: string;
+  type: string;
+  autoComplete: string;
+  placeholder?: string;
+  help?: string;
+}[] = [
   { name: "username", label: "Nome", type: "text", autoComplete: "name", placeholder: "Seu nome" },
   { name: "email", label: "E-mail", type: "email", autoComplete: "email", placeholder: "nome@empresa.com" },
-  { name: "password", label: "Senha", type: "password", autoComplete: "new-password", help: "Mínimo de 8 caracteres." },
+  {
+    name: "password",
+    label: "Senha",
+    type: "password",
+    autoComplete: "new-password",
+    help: "Mínimo de 8 caracteres.",
+  },
   { name: "confirmPassword", label: "Confirmar senha", type: "password", autoComplete: "new-password" },
 ];
 

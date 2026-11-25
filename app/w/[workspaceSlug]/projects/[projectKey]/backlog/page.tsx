@@ -20,7 +20,9 @@ import { ProjectMenu } from "@/components/projects/project-menu";
 import { UserAvatar } from "@/components/user-avatar";
 import type { ProjectSprintSummaryDTO, TaskDTO } from "@/server/db/types";
 
-export default function BacklogPage({ params }: PageProps<"/w/[workspaceSlug]/projects/[projectKey]/backlog">) {
+export default function BacklogPage({
+  params,
+}: PageProps<"/w/[workspaceSlug]/projects/[projectKey]/backlog">) {
   return (
     <Suspense fallback={<BacklogSkeleton />}>
       <Backlog params={params} />
@@ -46,7 +48,8 @@ async function Backlog({ params }: { params: Promise<{ workspaceSlug: string; pr
   const sprints = [...project.sprints].sort((a, b) => ORDER[a.status] - ORDER[b.status]);
   const planned = sprints.filter((s) => s.status === "PLANNED").map((s) => ({ id: s.id, name: s.name }));
   const hasActive = sprints.some((s) => s.status === "ACTIVE");
-  const tasksOf = (sprintId: string | null) => project.tasks.filter((t) => (t.sprint?.id ?? null) === sprintId);
+  const tasksOf = (sprintId: string | null) =>
+    project.tasks.filter((t) => (t.sprint?.id ?? null) === sprintId);
 
   const open = sprints.filter((s) => s.status !== "COMPLETED");
   const completed = sprints.filter((s) => s.status === "COMPLETED");
@@ -83,7 +86,13 @@ async function Backlog({ params }: { params: Promise<{ workspaceSlug: string; pr
           <div className="flex flex-wrap gap-2">
             {workspace.currentUserRole !== "MEMBER" && (
               <ProjectMenu
-                project={{ id: project.id, name: project.name, key: project.key, description: project.description, taskCount: project.tasks.length }}
+                project={{
+                  id: project.id,
+                  name: project.name,
+                  key: project.key,
+                  description: project.description,
+                  taskCount: project.tasks.length,
+                }}
                 workspaceSlug={workspace.slug}
               />
             )}
@@ -115,7 +124,10 @@ async function Backlog({ params }: { params: Promise<{ workspaceSlug: string; pr
         <Collapsible className="flex flex-col gap-3">
           <CollapsibleTrigger asChild>
             <Button variant="ghost" className="group self-start">
-              <ChevronDown aria-hidden="true" className="transition-transform group-data-[state=closed]:-rotate-90" />
+              <ChevronDown
+                aria-hidden="true"
+                className="transition-transform group-data-[state=closed]:-rotate-90"
+              />
               Sprints concluídas ({completed.length})
             </Button>
           </CollapsibleTrigger>
@@ -160,7 +172,9 @@ function SprintSection({
       <CardContent className="px-0">
         {tasks.length === 0 ? (
           <p className="px-5 py-4 text-[13px] text-muted-foreground">
-            {sprint ? "Nenhuma tarefa. Mova tarefas para cá pelo campo Sprint da tarefa." : "Nenhuma tarefa fora de sprints."}
+            {sprint
+              ? "Nenhuma tarefa. Mova tarefas para cá pelo campo Sprint da tarefa."
+              : "Nenhuma tarefa fora de sprints."}
           </p>
         ) : (
           <Table>
@@ -186,7 +200,11 @@ function SprintSection({
                       </span>
                     </TableCell>
                     <TableCell className="font-medium whitespace-normal">
-                      <Link href={`${base}/tasks/${task.code}`} scroll={false} className="underline-offset-4 hover:underline">
+                      <Link
+                        href={`${base}/tasks/${task.code}`}
+                        scroll={false}
+                        className="underline-offset-4 hover:underline"
+                      >
                         {task.title}
                       </Link>
                     </TableCell>
@@ -196,12 +214,16 @@ function SprintSection({
                     <TableCell className="w-28">
                       <Badge variant={priority.variant}>{priority.label}</Badge>
                     </TableCell>
-                    <TableCell className="w-20 text-text-secondary tabular-nums">{task.storyPoints ?? "—"} pts</TableCell>
+                    <TableCell className="w-20 text-text-secondary tabular-nums">
+                      {task.storyPoints ?? "—"} pts
+                    </TableCell>
                     <TableCell className="w-12 pr-5">
                       {task.assignee ? (
                         <UserAvatar name={task.assignee.name} image={task.assignee.image} size="sm" />
                       ) : (
-                        <span className="text-muted-foreground" title="Sem responsável">—</span>
+                        <span className="text-muted-foreground" title="Sem responsável">
+                          —
+                        </span>
                       )}
                     </TableCell>
                   </TableRow>

@@ -19,7 +19,11 @@ interface RecordHistoryInput {
 /** Grava uma entrada no histórico do workspace. Falha no histórico não desfaz a ação principal. */
 export async function recordHistory(input: RecordHistoryInput) {
   try {
-    await ChangeHistory.create({ ...input, projectId: input.projectId ?? null, parentId: input.parentId ?? null });
+    await ChangeHistory.create({
+      ...input,
+      projectId: input.projectId ?? null,
+      parentId: input.parentId ?? null,
+    });
   } catch (error) {
     console.error("[recordHistory]:", error);
   }
@@ -68,7 +72,10 @@ export async function getWorkspaceHistory(
   if (!Types.ObjectId.isValid(userId)) return null;
   await dbConnect();
 
-  const workspace = await Workspace.findOne({ slug: workspaceSlug.trim().toLowerCase(), "members.userId": userId })
+  const workspace = await Workspace.findOne({
+    slug: workspaceSlug.trim().toLowerCase(),
+    "members.userId": userId,
+  })
     .select("_id")
     .lean<{ _id: Types.ObjectId }>();
   if (!workspace) return null;

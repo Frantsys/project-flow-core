@@ -14,11 +14,13 @@ import { OAuthButtons } from "./oauth-buttons";
 
 const WRONG_CREDENTIALS = "E-mail ou senha incorretos. Confira os dados ou redefina a senha.";
 
-const PROVIDER_FAILED = "Não foi possível entrar com o Google ou o GitHub. Tente de novo ou use e-mail e senha.";
+const PROVIDER_FAILED =
+  "Não foi possível entrar com o Google ou o GitHub. Tente de novo ou use e-mail e senha.";
 
 // Códigos que o NextAuth devolve na URL (?error=) depois de um login malsucedido
 const URL_ERRORS: Record<string, string> = {
-  OAuthAccountNotLinked: "Este e-mail já está ligado a outra forma de login. Entre com o método usado no cadastro.",
+  OAuthAccountNotLinked:
+    "Este e-mail já está ligado a outra forma de login. Entre com o método usado no cadastro.",
   AccessDenied: "O acesso foi negado pelo provedor. Tente novamente.",
   OAuthSignin: PROVIDER_FAILED,
   OAuthCallback: PROVIDER_FAILED,
@@ -41,7 +43,7 @@ export function LoginForm() {
 
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [formError, setFormError] = useState<string | null>(
-    urlError ? URL_ERRORS[urlError] ?? "Não foi possível entrar. Tente novamente." : null
+    urlError ? (URL_ERRORS[urlError] ?? "Não foi possível entrar. Tente novamente.") : null
   );
   const [pending, setPending] = useState(false);
 

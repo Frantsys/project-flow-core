@@ -49,7 +49,13 @@ async function Board({ params }: { params: Promise<{ workspaceSlug: string; proj
           <div className="flex flex-wrap gap-2">
             {workspace.currentUserRole !== "MEMBER" && (
               <ProjectMenu
-                project={{ id: project.id, name: project.name, key: project.key, description: project.description, taskCount: project.tasks.length }}
+                project={{
+                  id: project.id,
+                  name: project.name,
+                  key: project.key,
+                  description: project.description,
+                  taskCount: project.tasks.length,
+                }}
                 workspaceSlug={workspace.slug}
               />
             )}
@@ -118,13 +124,26 @@ async function Board({ params }: { params: Promise<{ workspaceSlug: string; proj
   );
 }
 
-function TaskCard({ task, statuses, href, now }: { task: TaskDTO; statuses: string[]; href: string; now: Date }) {
+function TaskCard({
+  task,
+  statuses,
+  href,
+  now,
+}: {
+  task: TaskDTO;
+  statuses: string[];
+  href: string;
+  now: Date;
+}) {
   const priority = priorityBadge[task.priority];
   const due = task.dueDate ? shortDate(task.dueDate, now) : null;
   const overdue = task.dueDate ? new Date(task.dueDate) < now : false;
 
   return (
-    <Card size="sm" className="relative rounded-[10px] shadow-xs transition-colors hover:border-border-strong has-[a:focus-visible]:ring-3 has-[a:focus-visible]:ring-ring/50">
+    <Card
+      size="sm"
+      className="relative rounded-[10px] shadow-xs transition-colors hover:border-border-strong has-[a:focus-visible]:ring-3 has-[a:focus-visible]:ring-ring/50"
+    >
       <CardHeader className="flex items-center gap-2">
         <TaskTypeIndicator type={task.type} />
         <span className="font-mono text-xs font-medium text-text-secondary">{task.code}</span>
@@ -138,7 +157,11 @@ function TaskCard({ task, statuses, href, now }: { task: TaskDTO; statuses: stri
       <CardContent className="flex flex-col gap-2.5">
         <CardTitle className="line-clamp-3 text-sm leading-snug font-medium">
           {/* o link cobre o card inteiro (after:inset-0); o menu fica por cima com z-10 */}
-          <Link href={href} scroll={false} className="outline-none after:absolute after:inset-0 after:content-['']">
+          <Link
+            href={href}
+            scroll={false}
+            className="outline-none after:absolute after:inset-0 after:content-['']"
+          >
             {task.title}
           </Link>
         </CardTitle>
@@ -149,7 +172,9 @@ function TaskCard({ task, statuses, href, now }: { task: TaskDTO; statuses: stri
             </Badge>
           )}
           {due && (
-            <span className={cn((overdue || due === "hoje") && "font-medium text-destructive-text")}>{due}</span>
+            <span className={cn((overdue || due === "hoje") && "font-medium text-destructive-text")}>
+              {due}
+            </span>
           )}
           {task.sprint && <span className="truncate">{task.sprint.name}</span>}
           {task.assignee ? (

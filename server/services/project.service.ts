@@ -1,8 +1,15 @@
 import dbConnect from "@/lib/db";
 import { Types } from "mongoose";
 import { Workspace, Project, Sprint, Task } from "../db/models";
-import { ProjectDetailsDTO, ProjectDTO, ProjectSprintSummaryDTO, SprintStatus, TaskDTO, TaskPriority, TaskType } from "../db/types";
-
+import {
+  ProjectDetailsDTO,
+  ProjectDTO,
+  ProjectSprintSummaryDTO,
+  SprintStatus,
+  TaskDTO,
+  TaskPriority,
+  TaskType,
+} from "../db/types";
 
 interface WorkspaceIdLean {
   _id: Types.ObjectId;
@@ -46,9 +53,7 @@ export async function getProjectsByWorkspaceSlug(
   }
 
   const projects = await Project.find({ workspaceId: workspace._id })
-    .select(
-      "_id workspaceId name key description statuses taskSequence createdAt updatedAt"
-    )
+    .select("_id workspaceId name key description statuses taskSequence createdAt updatedAt")
     .sort({ createdAt: 1 })
     .lean<ProjectLean[]>();
 
@@ -137,9 +142,7 @@ export async function getProjectByKey(
   // 3. Carrega tasks (com sprint e assignee populados) e sprints em paralelo
   const [rawTasks, rawSprints] = await Promise.all([
     Task.find({ projectId: project._id })
-      .select(
-        "_id code title type status priority storyPoints dueDate sprintId assigneeId"
-      )
+      .select("_id code title type status priority storyPoints dueDate sprintId assigneeId")
       .populate("sprintId", "name")
       .populate("assigneeId", "username image")
       .sort({ createdAt: 1 })

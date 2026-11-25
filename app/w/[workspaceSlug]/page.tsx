@@ -11,8 +11,23 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
-import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item";
 import { UserAvatar } from "@/components/user-avatar";
 import { CreateProjectDialog } from "@/components/projects/create-project-dialog";
 
@@ -106,48 +121,48 @@ async function Overview({ params }: { params: Promise<{ workspaceSlug: string }>
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-semibold">Membros</CardTitle>
-          <CardAction>
-            <Button variant="link" size="sm" asChild>
-              <Link href={`/w/${workspace.slug}/settings?tab=membros`}>Gerenciar</Link>
-            </Button>
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          <ItemGroup>
-            {workspace.members.map((member) => (
-              <Item key={member.id} size="sm" className="px-0">
-                <ItemMedia>
-                  <UserAvatar name={member.name} image={member.image} />
-                </ItemMedia>
-                <ItemContent>
-                  <ItemTitle>{member.name}</ItemTitle>
-                  <ItemDescription>{member.email}</ItemDescription>
-                </ItemContent>
-                <ItemActions>
-                  <Badge variant="outline">{roleLabel[member.role]}</Badge>
-                </ItemActions>
-              </Item>
-            ))}
-          </ItemGroup>
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-semibold">Membros</CardTitle>
+            <CardAction>
+              <Button variant="link" size="sm" asChild>
+                <Link href={`/w/${workspace.slug}/settings?tab=membros`}>Gerenciar</Link>
+              </Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <ItemGroup>
+              {workspace.members.map((member) => (
+                <Item key={member.id} size="sm" className="px-0">
+                  <ItemMedia>
+                    <UserAvatar name={member.name} image={member.image} />
+                  </ItemMedia>
+                  <ItemContent>
+                    <ItemTitle>{member.name}</ItemTitle>
+                    <ItemDescription>{member.email}</ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
+                    <Badge variant="outline">{roleLabel[member.role]}</Badge>
+                  </ItemActions>
+                </Item>
+              ))}
+            </ItemGroup>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-semibold">Atividade recente</CardTitle>
-          <CardAction>
-            <Button variant="link" size="sm" asChild>
-              <Link href={`/w/${workspace.slug}/settings?tab=historico`}>Ver tudo</Link>
-            </Button>
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          <HistoryList entries={activity} />
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-semibold">Atividade recente</CardTitle>
+            <CardAction>
+              <Button variant="link" size="sm" asChild>
+                <Link href={`/w/${workspace.slug}/settings?tab=historico`}>Ver tudo</Link>
+              </Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <HistoryList entries={activity} />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

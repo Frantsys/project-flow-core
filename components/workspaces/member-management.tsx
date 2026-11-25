@@ -109,10 +109,16 @@ export function MemberActions({ workspaceId, member, currentUser }: MemberAction
   const isSelf = member.id === currentUser.id;
   const isOwner = member.role === "OWNER";
   const canEditRole =
-    !isOwner && !isSelf && (currentUser.role === "OWNER" || (currentUser.role === "ADMIN" && member.role === "MEMBER"));
+    !isOwner &&
+    !isSelf &&
+    (currentUser.role === "OWNER" || (currentUser.role === "ADMIN" && member.role === "MEMBER"));
   const canRemove = !isOwner && (isSelf || canEditRole);
 
-  function run(action: () => Promise<{ success: true } | { success: false; error: string }>, message: string, after?: () => void) {
+  function run(
+    action: () => Promise<{ success: true } | { success: false; error: string }>,
+    message: string,
+    after?: () => void
+  ) {
     startTransition(async () => {
       const result = await action();
       if (!result.success) {

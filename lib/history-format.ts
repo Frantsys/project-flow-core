@@ -18,7 +18,8 @@ function value(field: string | undefined, v: string | null | undefined) {
   if (v == null || v === "") return "vazio";
   if (field === "type") return typeLabel[v as TaskType] ?? v;
   if (field === "priority") return priorityBadge[v as TaskPriority]?.label ?? v;
-  if (field === "dueDate") return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${v}T00:00:00Z`));
+  if (field === "dueDate")
+    return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${v}T00:00:00Z`));
   return v;
 }
 

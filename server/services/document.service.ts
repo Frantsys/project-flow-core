@@ -32,7 +32,10 @@ async function workspaceIdFor(slug: string, userId: string) {
 }
 
 /** Todos os documentos do workspace (sem conteúdo), para montar a árvore. */
-export async function getWorkspaceDocuments(slug: string, userId: string): Promise<DocumentSummaryDTO[] | null> {
+export async function getWorkspaceDocuments(
+  slug: string,
+  userId: string
+): Promise<DocumentSummaryDTO[] | null> {
   const workspaceId = await workspaceIdFor(slug, userId);
   if (!workspaceId) return null;
 
@@ -43,7 +46,11 @@ export async function getWorkspaceDocuments(slug: string, userId: string): Promi
   return docs.map(summary);
 }
 
-export async function getDocument(slug: string, documentId: string, userId: string): Promise<DocumentDTO | null> {
+export async function getDocument(
+  slug: string,
+  documentId: string,
+  userId: string
+): Promise<DocumentDTO | null> {
   if (!Types.ObjectId.isValid(documentId)) return null;
   const workspaceId = await workspaceIdFor(slug, userId);
   if (!workspaceId) return null;

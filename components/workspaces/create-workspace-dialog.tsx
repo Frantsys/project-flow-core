@@ -60,7 +60,14 @@ export function CreateWorkspaceDialog({ trigger }: { trigger: React.ReactNode })
             </DialogHeader>
             <Field data-invalid={!!error}>
               <FieldLabel htmlFor="ws-name">Nome</FieldLabel>
-              <Input id="ws-name" name="name" placeholder="Ex.: Acme Labs" required autoFocus aria-invalid={!!error} />
+              <Input
+                id="ws-name"
+                name="name"
+                placeholder="Ex.: Acme Labs"
+                required
+                autoFocus
+                aria-invalid={!!error}
+              />
               <FieldError>{error}</FieldError>
             </Field>
             <DialogFooter>

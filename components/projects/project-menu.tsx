@@ -10,7 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogClose,
@@ -56,7 +61,11 @@ export function ProjectMenu({ project, workspaceSlug }: ProjectMenuProps) {
       });
       if (!result.success) {
         const fe = result.fieldErrors ?? {};
-        setErrors({ name: fe.name?.[0], description: fe.description?.[0], form: result.fieldErrors ? undefined : result.error });
+        setErrors({
+          name: fe.name?.[0],
+          description: fe.description?.[0],
+          form: result.fieldErrors ? undefined : result.error,
+        });
         return;
       }
       setErrors({});
@@ -107,11 +116,19 @@ export function ProjectMenu({ project, workspaceSlug }: ProjectMenuProps) {
             <FieldGroup>
               <DialogHeader>
                 <DialogTitle>Editar projeto</DialogTitle>
-                <DialogDescription>A chave {project.key} não muda, para não alterar o código das tarefas.</DialogDescription>
+                <DialogDescription>
+                  A chave {project.key} não muda, para não alterar o código das tarefas.
+                </DialogDescription>
               </DialogHeader>
               <Field data-invalid={!!errors.name}>
                 <FieldLabel htmlFor="edit-project-name">Nome</FieldLabel>
-                <Input id="edit-project-name" name="name" defaultValue={project.name} required aria-invalid={!!errors.name} />
+                <Input
+                  id="edit-project-name"
+                  name="name"
+                  defaultValue={project.name}
+                  required
+                  aria-invalid={!!errors.name}
+                />
                 <FieldError>{errors.name}</FieldError>
               </Field>
               <Field data-invalid={!!errors.description}>
@@ -142,24 +159,39 @@ export function ProjectMenu({ project, workspaceSlug }: ProjectMenuProps) {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={deleteOpen} onOpenChange={(open) => { setDeleteOpen(open); if (!open) setTyped(""); }}>
+      <AlertDialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          setDeleteOpen(open);
+          if (!open) setTyped("");
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir o projeto {project.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              {project.taskCount === 1 ? "A tarefa" : `As ${project.taskCount} tarefas`}, as sprints e os documentos do projeto
-              serão excluídos. Não é possível desfazer.
+              {project.taskCount === 1 ? "A tarefa" : `As ${project.taskCount} tarefas`}, as sprints e os
+              documentos do projeto serão excluídos. Não é possível desfazer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <Field>
             <FieldLabel htmlFor="confirm-project-key">
               Digite <span className="font-mono">{project.key}</span> para confirmar
             </FieldLabel>
-            <Input id="confirm-project-key" autoComplete="off" value={typed} onChange={(e) => setTyped(e.target.value)} />
+            <Input
+              id="confirm-project-key"
+              autoComplete="off"
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+            />
           </Field>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" disabled={typed.trim().toUpperCase() !== project.key || pending} onClick={onDelete}>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={typed.trim().toUpperCase() !== project.key || pending}
+              onClick={onDelete}
+            >
               {pending && <Spinner />}
               Excluir projeto
             </AlertDialogAction>

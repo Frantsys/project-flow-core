@@ -27,76 +27,75 @@ function getMongoClient() {
   return globalForMongo._adapterClient;
 }
 
-
 export const authOptions: NextAuthOptions = {
-    // databaseName: sem ele o adapter usaria o banco da URI ("test") e as contas OAuth ficariam separadas
-    adapter: MongoDBAdapter(getMongoClient, { databaseName: DB_NAME }),
-    providers: [
-        GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID!,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-            allowDangerousEmailAccountLinking: true,
-        }),
-        GitHubProvider({
-            clientId: process.env.GITHUB_ID!,
-            clientSecret: process.env.GITHUB_SECRET!,
-            allowDangerousEmailAccountLinking: true,
-        }),
-        
-        CredentialsProvider({
-            name: "Credentials",
-            credentials: {
-                email: { label: "Email", type: "text"},
-                password: { label: "Senha", type: "password" }
-            },
+  // databaseName: sem ele o adapter usaria o banco da URI ("test") e as contas OAuth ficariam separadas
+  adapter: MongoDBAdapter(getMongoClient, { databaseName: DB_NAME }),
+  providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      allowDangerousEmailAccountLinking: true,
+    }),
+    GitHubProvider({
+      clientId: process.env.GITHUB_ID!,
+      clientSecret: process.env.GITHUB_SECRET!,
+      allowDangerousEmailAccountLinking: true,
+    }),
 
-            async authorize(credentials) {
-                await dbConnect();
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "text" },
+        password: { label: "Senha", type: "password" },
+      },
 
-                if (!credentials?.email || !credentials.password) throw new Error("Credenciais incorretas.");
+      async authorize(credentials) {
+        await dbConnect();
 
-                const user = await User.findOne({ email: credentials.email }).select("+passwordHash");
+        if (!credentials?.email || !credentials.password) throw new Error("Credenciais incorretas.");
 
-                if (!user) throw new Error("Credenciais incorretas.");
+        const user = await User.findOne({ email: credentials.email }).select("+passwordHash");
 
-                // contas criadas via Google/GitHub não têm senha
-                if (!user.passwordHash) throw new Error("Credenciais incorretas.");
+        if (!user) throw new Error("Credenciais incorretas.");
 
-                const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
-                if (!isValid) throw new Error("Credenciais incorretas.");
+        // contas criadas via Google/GitHub não têm senha
+        if (!user.passwordHash) throw new Error("Credenciais incorretas.");
 
-                return { id: user._id.toString(), email: user.email, name: user.username };
-            }
-        })
-    ],
-    pages: {
-        // sem signIn, erros de OAuth caíam na página padrão do NextAuth, em inglês
-        signIn: "/auth/login",
-        signOut: "/auth/login",
-        error: "/auth/login",
-        newUser: "/workspaces"
+        const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
+        if (!isValid) throw new Error("Credenciais incorretas.");
+
+        return { id: user._id.toString(), email: user.email, name: user.username };
+      },
+    }),
+  ],
+  pages: {
+    // sem signIn, erros de OAuth caíam na página padrão do NextAuth, em inglês
+    signIn: "/auth/login",
+    signOut: "/auth/login",
+    error: "/auth/login",
+    newUser: "/workspaces",
+  },
+  session: {
+    strategy: "jwt",
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+  events: {
+    // O adapter grava o nome em `name`, mas o app lê `username` (model User).
+    // Copia na criação para contas do Google/GitHub não aparecerem sem nome.
+    async createUser({ user }) {
+      await dbConnect();
+      await User.updateOne(
+        { _id: user.id },
+        { $set: { username: user.name || user.email?.split("@")[0] || "Usuário" } }
+      );
     },
-    session: {
-        strategy: "jwt",
+  },
+  callbacks: {
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.sub!; // Adiciona ID na sessão
+      }
+      return session;
     },
-    secret: process.env.NEXTAUTH_SECRET,
-    events: {
-        // O adapter grava o nome em `name`, mas o app lê `username` (model User).
-        // Copia na criação para contas do Google/GitHub não aparecerem sem nome.
-        async createUser({ user }) {
-            await dbConnect();
-            await User.updateOne(
-                { _id: user.id },
-                { $set: { username: user.name || user.email?.split("@")[0] || "Usuário" } }
-            );
-        },
-    },
-    callbacks: {
-        async session({ session, token }) {
-            if (session.user) {
-                session.user.id = token.sub!; // Adiciona ID na sessão
-            }
-            return session;
-        }
-    }
-}
+  },
+};

@@ -10,36 +10,20 @@ export async function GET(
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Não autenticado." },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
     }
 
     const { workspaceSlug, projectKey } = await params;
 
-    const project = await getProjectByKey(
-      workspaceSlug,
-      projectKey,
-      session.user.id
-    );
+    const project = await getProjectByKey(workspaceSlug, projectKey, session.user.id);
 
     if (!project) {
-      return NextResponse.json(
-        { error: "Projeto não encontrado ou acesso negado." },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Projeto não encontrado ou acesso negado." }, { status: 404 });
     }
 
     return NextResponse.json({ data: project }, { status: 200 });
   } catch (error) {
-    console.error(
-      "[GET /api/workspaces/[workspaceSlug]/projects/[projectKey]]:",
-      error
-    );
-    return NextResponse.json(
-      { error: "Erro interno ao carregar detalhes do projeto." },
-      { status: 500 }
-    );
+    console.error("[GET /api/workspaces/[workspaceSlug]/projects/[projectKey]]:", error);
+    return NextResponse.json({ error: "Erro interno ao carregar detalhes do projeto." }, { status: 500 });
   }
 }

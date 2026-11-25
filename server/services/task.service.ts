@@ -26,7 +26,13 @@ interface TaskDetailLean {
   sprintId?: { _id: Types.ObjectId; name: string } | null;
   assigneeId?: PersonLean | null;
   reporterId?: PersonLean | null;
-  subtasks: { _id: Types.ObjectId; title: string; isCompleted: boolean; generatedByAi: boolean; order: number }[];
+  subtasks: {
+    _id: Types.ObjectId;
+    title: string;
+    isCompleted: boolean;
+    generatedByAi: boolean;
+    order: number;
+  }[];
   comments: { _id: Types.ObjectId; authorId: PersonLean | null; content: string; createdAt: Date }[];
   createdAt: Date;
   updatedAt: Date;
@@ -47,7 +53,10 @@ export async function getTaskDetail(
   if (!Types.ObjectId.isValid(userId)) return null;
   await dbConnect();
 
-  const workspace = await Workspace.findOne({ slug: workspaceSlug.trim().toLowerCase(), "members.userId": userId })
+  const workspace = await Workspace.findOne({
+    slug: workspaceSlug.trim().toLowerCase(),
+    "members.userId": userId,
+  })
     .select("_id")
     .lean<{ _id: Types.ObjectId }>();
   if (!workspace) return null;
@@ -84,7 +93,12 @@ export async function getTaskDetail(
     reporter: person(task.reporterId),
     subtasks: [...task.subtasks]
       .sort((a, b) => a.order - b.order)
-      .map((s) => ({ id: s._id.toString(), title: s.title, isCompleted: s.isCompleted, generatedByAi: s.generatedByAi })),
+      .map((s) => ({
+        id: s._id.toString(),
+        title: s.title,
+        isCompleted: s.isCompleted,
+        generatedByAi: s.generatedByAi,
+      })),
     comments: task.comments.map((c) => ({
       id: c._id.toString(),
       content: c.content,

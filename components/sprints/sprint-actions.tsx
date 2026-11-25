@@ -9,7 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,14 +38,22 @@ interface SprintActionsProps {
 }
 
 /** Iniciar, concluir ou excluir uma sprint. Só aparece para dono e admin. */
-export function SprintActions({ sprint, openTaskCodes, plannedSprints, hasActiveSprint }: SprintActionsProps) {
+export function SprintActions({
+  sprint,
+  openTaskCodes,
+  plannedSprints,
+  hasActiveSprint,
+}: SprintActionsProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [completeOpen, setCompleteOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [destination, setDestination] = useState(plannedSprints[0]?.id ?? BACKLOG);
 
-  function run(action: () => Promise<{ success: true } | { success: false; error: string }>, message: string) {
+  function run(
+    action: () => Promise<{ success: true } | { success: false; error: string }>,
+    message: string
+  ) {
     startTransition(async () => {
       const result = await action();
       if (!result.success) {
@@ -151,7 +164,9 @@ export function SprintActions({ sprint, openTaskCodes, plannedSprints, hasActive
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              onClick={() => run(() => deleteSprintAction({ sprintId: sprint.id }), `${sprint.name} excluída.`)}
+              onClick={() =>
+                run(() => deleteSprintAction({ sprintId: sprint.id }), `${sprint.name} excluída.`)
+              }
             >
               Excluir sprint
             </AlertDialogAction>

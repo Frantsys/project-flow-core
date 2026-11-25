@@ -52,7 +52,8 @@ async function Settings({
   const canManage = role !== "MEMBER";
   const info = { id: workspace.id, name: workspace.name, slug: workspace.slug };
   const requested = TABS.find((t) => t === tab);
-  const initial = requested && (requested !== "geral" || canManage) ? requested : canManage ? "geral" : "membros";
+  const initial =
+    requested && (requested !== "geral" || canManage) ? requested : canManage ? "geral" : "membros";
 
   return (
     <Tabs defaultValue={initial} className="gap-5">
@@ -104,7 +105,9 @@ async function Settings({
                         <div>
                           <div className="font-medium">
                             {member.name}
-                            {member.id === user.id && <span className="font-normal text-muted-foreground"> (você)</span>}
+                            {member.id === user.id && (
+                              <span className="font-normal text-muted-foreground"> (você)</span>
+                            )}
                           </div>
                           <div className="text-xs text-muted-foreground">{member.email}</div>
                         </div>

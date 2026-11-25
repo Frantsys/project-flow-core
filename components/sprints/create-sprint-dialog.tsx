@@ -51,7 +51,12 @@ export function CreateSprintDialog({
 
     if (!result.success) {
       const fe = result.fieldErrors ?? {};
-      setErrors({ name: fe.name?.[0], goal: fe.goal?.[0], startDate: fe.startDate?.[0], endDate: fe.endDate?.[0] });
+      setErrors({
+        name: fe.name?.[0],
+        goal: fe.goal?.[0],
+        startDate: fe.startDate?.[0],
+        endDate: fe.endDate?.[0],
+      });
       setFormError(result.fieldErrors ? undefined : result.error);
       return;
     }
@@ -81,12 +86,24 @@ export function CreateSprintDialog({
             </DialogHeader>
             <Field data-invalid={!!errors.name}>
               <FieldLabel htmlFor="sprint-name">Nome</FieldLabel>
-              <Input id="sprint-name" name="name" defaultValue={suggestedName} required autoFocus aria-invalid={!!errors.name} />
+              <Input
+                id="sprint-name"
+                name="name"
+                defaultValue={suggestedName}
+                required
+                autoFocus
+                aria-invalid={!!errors.name}
+              />
               <FieldError>{errors.name}</FieldError>
             </Field>
             <Field data-invalid={!!errors.goal}>
               <FieldLabel htmlFor="sprint-goal">Meta (opcional)</FieldLabel>
-              <Input id="sprint-goal" name="goal" placeholder="O que o time quer entregar" aria-invalid={!!errors.goal} />
+              <Input
+                id="sprint-goal"
+                name="goal"
+                placeholder="O que o time quer entregar"
+                aria-invalid={!!errors.goal}
+              />
               <FieldError>{errors.goal}</FieldError>
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">

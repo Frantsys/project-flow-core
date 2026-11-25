@@ -3,7 +3,14 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FileText } from "lucide-react";
 import { getDocuments, getWorkspace, requireUser } from "@/lib/session";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { NewDocumentButton } from "@/components/docs/new-document-button";
 
 export const metadata: Metadata = { title: "Documentos" };

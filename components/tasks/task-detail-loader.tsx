@@ -8,7 +8,13 @@ import { TaskSheet } from "./task-sheet";
 export type TaskParams = Promise<{ workspaceSlug: string; projectKey: string; code: string }>;
 
 /** Busca tudo que a tela da tarefa precisa e renderiza na página ou no painel lateral. */
-export async function TaskDetailLoader({ params, variant }: { params: TaskParams; variant: "page" | "sheet" }) {
+export async function TaskDetailLoader({
+  params,
+  variant,
+}: {
+  params: TaskParams;
+  variant: "page" | "sheet";
+}) {
   const { workspaceSlug, projectKey, code } = await params;
   const user = await requireUser();
   const [workspace, project, task] = await Promise.all([

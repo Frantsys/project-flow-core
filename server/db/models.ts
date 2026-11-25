@@ -6,15 +6,14 @@ import { SprintStatus, TaskPriority, TaskType } from "./types";
  *  mais detalhes dessa decisão arquitetural em `docs/adrs/003-uso-de-schemas-mongodb.md`
  */
 
-
 export interface IUser extends Document {
-    username: string
-    email: string
-    emailVerified?: Date | null
-    image?: string | null
-    passwordHash?: string | null
-    createdAt: Date
-    updatedAt: Date
+  username: string;
+  email: string;
+  emailVerified?: Date | null;
+  image?: string | null;
+  passwordHash?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -29,13 +28,7 @@ const UserSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
-
-export const User: Model<IUser> =
-  mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
-
-
-
-
+export const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
 
 export type WorkspaceRole = "OWNER" | "ADMIN" | "MEMBER";
 
@@ -82,8 +75,6 @@ WorkspaceSchema.index({ "members.userId": 1 });
 export const Workspace: Model<IWorkspace> =
   mongoose.models.Workspace || mongoose.model<IWorkspace>("Workspace", WorkspaceSchema);
 
-
-
 export interface IProject extends Document {
   workspaceId: Types.ObjectId;
   key: string;
@@ -115,9 +106,6 @@ ProjectSchema.index({ workspaceId: 1, key: 1 }, { unique: true });
 
 export const Project: Model<IProject> =
   mongoose.models.Project || mongoose.model<IProject>("Project", ProjectSchema);
-
-
-
 
 export interface ISprint extends Document {
   projectId: Types.ObjectId;
@@ -242,10 +230,7 @@ const TaskSchema = new Schema<ITask>(
 TaskSchema.index({ projectId: 1, code: 1 }, { unique: true });
 TaskSchema.index({ projectId: 1, status: 1 });
 
-export const Task: Model<ITask> =
-  mongoose.models.Task || mongoose.model<ITask>("Task", TaskSchema);
-
-
+export const Task: Model<ITask> = mongoose.models.Task || mongoose.model<ITask>("Task", TaskSchema);
 
 /**
  *  Referente a qualquer tipo de documentação escrita
@@ -277,20 +262,11 @@ const DocumentSchema = new Schema<IDocument>(
 export const DocumentModel: Model<IDocument> =
   mongoose.models.Document || mongoose.model<IDocument>("Document", DocumentSchema);
 
-
-
-
 /**
  *  Entidade referente ao sistema de auditoria e histórico de alterações no contexto de cada Workspace
  */
 export type HistoryAction = "CREATE" | "MODIFY" | "DELETE";
-export type HistoryTargetType =
-  | "PROJECT"
-  | "SPRINT"
-  | "TASK"
-  | "SUBTASK"
-  | "COMMENT"
-  | "DOCUMENT";
+export type HistoryTargetType = "PROJECT" | "SPRINT" | "TASK" | "SUBTASK" | "COMMENT" | "DOCUMENT";
 
 export interface IChangeHistory extends Document {
   workspaceId: Types.ObjectId;
@@ -341,7 +317,4 @@ ChangeHistorySchema.index({ targetId: 1, createdAt: -1 });
 ChangeHistorySchema.index({ parentId: 1, createdAt: -1 });
 
 export const ChangeHistory: Model<IChangeHistory> =
-  mongoose.models.ChangeHistory ||
-  mongoose.model<IChangeHistory>("ChangeHistory", ChangeHistorySchema);
-
-
+  mongoose.models.ChangeHistory || mongoose.model<IChangeHistory>("ChangeHistory", ChangeHistorySchema);

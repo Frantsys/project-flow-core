@@ -124,8 +124,9 @@ export function DeleteWorkspaceCard({
             <AlertDialogHeader>
               <AlertDialogTitle>Excluir o workspace {workspace.name}?</AlertDialogTitle>
               <AlertDialogDescription>
-                {projectsCount === 1 ? "O projeto" : `Os ${projectsCount} projetos`}, com tarefas, sprints e documentos,
-                serão excluídos. {membersCount === 1 ? "Você perde" : `Os ${membersCount} membros perdem`} o acesso. Não é
+                {projectsCount === 1 ? "O projeto" : `Os ${projectsCount} projetos`}, com tarefas, sprints e
+                documentos, serão excluídos.{" "}
+                {membersCount === 1 ? "Você perde" : `Os ${membersCount} membros perdem`} o acesso. Não é
                 possível desfazer.
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -133,7 +134,12 @@ export function DeleteWorkspaceCard({
               <FieldLabel htmlFor="confirm-slug">
                 Digite <span className="font-mono">{workspace.slug}</span> para confirmar
               </FieldLabel>
-              <Input id="confirm-slug" autoComplete="off" value={typed} onChange={(e) => setTyped(e.target.value)} />
+              <Input
+                id="confirm-slug"
+                autoComplete="off"
+                value={typed}
+                onChange={(e) => setTyped(e.target.value)}
+              />
             </Field>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>

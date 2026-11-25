@@ -41,7 +41,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { UserAvatar } from "@/components/user-avatar";
 import { TaskTypeIndicator } from "@/components/projects/task-type";
-import type { ProjectSprintSummaryDTO, TaskDetailDTO, TaskPriority, WorkspaceMemberDTO } from "@/server/db/types";
+import type {
+  ProjectSprintSummaryDTO,
+  TaskDetailDTO,
+  TaskPriority,
+  WorkspaceMemberDTO,
+} from "@/server/db/types";
 import type { WorkspaceRole } from "@/server/db/models";
 
 const NONE = "none"; // o Select do Radix não aceita valor vazio
@@ -61,7 +66,15 @@ export interface TaskDetailProps {
   onClose?: () => void;
 }
 
-export function TaskDetail({ task, statuses, sprints, members, currentUser, boardUrl, onClose }: TaskDetailProps) {
+export function TaskDetail({
+  task,
+  statuses,
+  sprints,
+  members,
+  currentUser,
+  boardUrl,
+  onClose,
+}: TaskDetailProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState(task.title);
@@ -147,7 +160,9 @@ export function TaskDetail({ task, statuses, sprints, members, currentUser, boar
         />
 
         <dl className="grid grid-cols-[120px_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 text-sm">
-          <dt id="lbl-status" className="text-[13px] text-muted-foreground">Status</dt>
+          <dt id="lbl-status" className="text-[13px] text-muted-foreground">
+            Status
+          </dt>
           <dd>
             <Select value={task.status} onValueChange={(status) => update({ status })}>
               <SelectTrigger aria-labelledby="lbl-status" className="w-full">
@@ -163,7 +178,9 @@ export function TaskDetail({ task, statuses, sprints, members, currentUser, boar
             </Select>
           </dd>
 
-          <dt id="lbl-priority" className="text-[13px] text-muted-foreground">Prioridade</dt>
+          <dt id="lbl-priority" className="text-[13px] text-muted-foreground">
+            Prioridade
+          </dt>
           <dd>
             <Select value={task.priority} onValueChange={(v) => update({ priority: v as TaskPriority })}>
               <SelectTrigger aria-labelledby="lbl-priority" className="w-full">
@@ -179,7 +196,9 @@ export function TaskDetail({ task, statuses, sprints, members, currentUser, boar
             </Select>
           </dd>
 
-          <dt id="lbl-type" className="text-[13px] text-muted-foreground">Tipo</dt>
+          <dt id="lbl-type" className="text-[13px] text-muted-foreground">
+            Tipo
+          </dt>
           <dd>
             <Select value={task.type} onValueChange={(v) => update({ type: v as (typeof TYPES)[number] })}>
               <SelectTrigger aria-labelledby="lbl-type" className="w-full">
@@ -195,7 +214,9 @@ export function TaskDetail({ task, statuses, sprints, members, currentUser, boar
             </Select>
           </dd>
 
-          <dt id="lbl-assignee" className="text-[13px] text-muted-foreground">Responsável</dt>
+          <dt id="lbl-assignee" className="text-[13px] text-muted-foreground">
+            Responsável
+          </dt>
           <dd>
             <Select
               value={task.assignee?.id ?? NONE}
@@ -228,7 +249,9 @@ export function TaskDetail({ task, statuses, sprints, members, currentUser, boar
             )}
           </dd>
 
-          <dt id="lbl-sprint" className="text-[13px] text-muted-foreground">Sprint</dt>
+          <dt id="lbl-sprint" className="text-[13px] text-muted-foreground">
+            Sprint
+          </dt>
           <dd>
             <Select
               value={task.sprint?.id ?? NONE}
@@ -321,7 +344,10 @@ export function TaskDetail({ task, statuses, sprints, members, currentUser, boar
               aria-valuemin={0}
               aria-valuemax={task.subtasks.length}
             >
-              <div className="h-full bg-primary transition-all" style={{ width: `${(doneCount / task.subtasks.length) * 100}%` }} />
+              <div
+                className="h-full bg-primary transition-all"
+                style={{ width: `${(doneCount / task.subtasks.length) * 100}%` }}
+              />
             </div>
           )}
           <ul className="flex flex-col">
@@ -334,7 +360,9 @@ export function TaskDetail({ task, statuses, sprints, members, currentUser, boar
                 />
                 <label
                   htmlFor={`sub-${s.id}`}
-                  className={s.isCompleted ? "flex-1 text-sm text-muted-foreground line-through" : "flex-1 text-sm"}
+                  className={
+                    s.isCompleted ? "flex-1 text-sm text-muted-foreground line-through" : "flex-1 text-sm"
+                  }
                 >
                   {s.title}
                 </label>
@@ -356,7 +384,10 @@ export function TaskDetail({ task, statuses, sprints, members, currentUser, boar
             onSubmit={(e) => {
               e.preventDefault();
               if (!newSubtask.trim()) return;
-              run(() => addSubtaskAction({ taskId: task.id, title: newSubtask }), () => setNewSubtask(""));
+              run(
+                () => addSubtaskAction({ taskId: task.id, title: newSubtask }),
+                () => setNewSubtask("")
+              );
             }}
           >
             <label htmlFor="new-subtask" className="sr-only">
@@ -406,7 +437,10 @@ export function TaskDetail({ task, statuses, sprints, members, currentUser, boar
             onSubmit={(e) => {
               e.preventDefault();
               if (!comment.trim()) return;
-              run(() => addCommentAction({ taskId: task.id, content: comment }), () => setComment(""));
+              run(
+                () => addCommentAction({ taskId: task.id, content: comment }),
+                () => setComment("")
+              );
             }}
           >
             <label htmlFor="new-comment" className="sr-only">
@@ -439,8 +473,8 @@ export function TaskDetail({ task, statuses, sprints, members, currentUser, boar
             <ul className="flex flex-col gap-1.5 text-[13px] text-muted-foreground">
               {task.history.map((h) => (
                 <li key={h.id}>
-                  <span className="font-medium text-text-secondary">{h.user?.name ?? "Alguém"}</span> {describeHistory(h)}{" "}
-                  esta tarefa · {timeAgo(h.createdAt)}
+                  <span className="font-medium text-text-secondary">{h.user?.name ?? "Alguém"}</span>{" "}
+                  {describeHistory(h)} esta tarefa · {timeAgo(h.createdAt)}
                 </li>
               ))}
             </ul>

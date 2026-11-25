@@ -27,7 +27,11 @@ async function DocumentView({ params }: { params: Promise<{ workspaceSlug: strin
 
   // trilha: sobe pelos pais até a raiz (com limite, caso algum dado venha com ciclo)
   const ancestors: { id: string; title: string }[] = [];
-  for (let p = doc.parentId ? byId.get(doc.parentId) : undefined; p && ancestors.length < 20; p = p.parentId ? byId.get(p.parentId) : undefined) {
+  for (
+    let p = doc.parentId ? byId.get(doc.parentId) : undefined;
+    p && ancestors.length < 20;
+    p = p.parentId ? byId.get(p.parentId) : undefined
+  ) {
     ancestors.unshift({ id: p.id, title: p.title });
   }
 

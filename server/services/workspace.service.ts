@@ -1,94 +1,87 @@
 import "server-only";
 import { ChangeHistory, DocumentModel, Project, Sprint, Task, Workspace, WorkspaceRole } from "../db/models";
 import dbConnect from "@/lib/db";
-import { WorkspaceDTO, WorkspaceMemberDTO, WorkspaceProjectSummaryDTO, WorkspaceSummaryDTO } from "../db/types";
+import {
+  WorkspaceDTO,
+  WorkspaceMemberDTO,
+  WorkspaceProjectSummaryDTO,
+  WorkspaceSummaryDTO,
+} from "../db/types";
 import mongoose, { Types } from "mongoose";
 import { UpdateWorkspaceInput } from "../schemas";
 import { ActionResult } from "@/types";
 import { verifyWorkspacePermission } from "./permission.service";
 
-
-
-export async function getUserWorkspaces(
-  userId: string
-): Promise<WorkspaceSummaryDTO[]> {
+export async function getUserWorkspaces(userId: string): Promise<WorkspaceSummaryDTO[]> {
   await dbConnect();
 
   // faz duas comparações OR, isto é, retorna caso uma seja satisfeita
-    const workspaces = await Workspace.find({
-        $or: [
+  const workspaces = await Workspace.find({
+    $or: [
+      // Se ownerId é o mesmo do usuário, isto é, o usuário é dono do workspace
+      { ownerId: userId },
 
-            // Se ownerId é o mesmo do usuário, isto é, o usuário é dono do workspace
-            { ownerId: userId },
-
-            // Se o usuário é um membro
-            { "members.userId": userId }
-        ],
-    })
+      // Se o usuário é um membro
+      { "members.userId": userId },
+    ],
+  })
     .select("name slug ownerId members createdAt") // Escolhe os campos a serem retornados
     .sort({ createdAt: -1 })
     .lean();
 
-    // Serve para pegar o Role do usuário em cada workspace que ele é membro
-    return workspaces.map((ws) => {
+  // Serve para pegar o Role do usuário em cada workspace que ele é membro
+  return workspaces.map((ws) => {
+    const memberEntry = ws.members.find((m) => m.userId.toString() === userId);
 
-        const memberEntry = ws.members.find((m) => m.userId.toString() === userId);
+    // Valida o cargo do usuário
+    const role: WorkspaceRole = ws.ownerId.toString() === userId ? "OWNER" : (memberEntry?.role ?? "MEMBER");
 
-      // Valida o cargo do usuário
-      const role: WorkspaceRole = ws.ownerId.toString() === userId ? "OWNER" : (memberEntry?.role ?? "MEMBER");
-
-      return {
-        id: ws._id.toString(),
-        name: ws.name,
-        slug: ws.slug,
-        role,
-        memberCount: ws.members.length,
-        createdAt: ws.createdAt.toISOString(),
-      };
-    });
-
+    return {
+      id: ws._id.toString(),
+      name: ws.name,
+      slug: ws.slug,
+      role,
+      memberCount: ws.members.length,
+      createdAt: ws.createdAt.toISOString(),
+    };
+  });
 }
 
 /**
  *  Conjunto de interfaces para o type checking do typescript
- * 
+ *
  */
 
 interface PopulateUserLean {
-  _id: Types.ObjectId
-  username: string
-  email: string
-  image?: string | null
+  _id: Types.ObjectId;
+  username: string;
+  email: string;
+  image?: string | null;
 }
 
 interface PopulateWorkspaceMemberLean {
-  userId: PopulateUserLean
-  role: WorkspaceRole
-  joinedAt: Date
+  userId: PopulateUserLean;
+  role: WorkspaceRole;
+  joinedAt: Date;
 }
 
 interface WorkspacePopulatedLean {
-  _id: Types.ObjectId
-  name: string
-  slug: string
-  ownerId: PopulateUserLean | null
-  members: PopulateWorkspaceMemberLean[]
-  createdAt: Date
-  updatedAt: Date
+  _id: Types.ObjectId;
+  name: string;
+  slug: string;
+  ownerId: PopulateUserLean | null;
+  members: PopulateWorkspaceMemberLean[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 interface ProjectSummaryLean {
-  _id: string
-  name: string
-  key: string
+  _id: string;
+  name: string;
+  key: string;
 }
 
-
-export async function getWorkspaceBySlug(
-  slug: string,
-  userId: string
-): Promise<WorkspaceDTO | null> {
-
+export async function getWorkspaceBySlug(slug: string, userId: string): Promise<WorkspaceDTO | null> {
   if (!slug || !Types.ObjectId.isValid(userId)) {
     return null;
   }
@@ -105,18 +98,18 @@ export async function getWorkspaceBySlug(
   }
 
   const members: WorkspaceMemberDTO[] = workspace.members
-  .filter((m): m is PopulateWorkspaceMemberLean & { userId: PopulateUserLean } => Boolean(m.userId))
-  .map((member) => {
-    return {
-      // o lean devolve ObjectId: sem toString a comparação com o userId (texto) nunca batia
-      id: member.userId._id.toString(),
-      name: member.userId.username,
-      email: member.userId.email,
-      image: member.userId.image,
-      role: member.role,
-      joinedAt: new Date(member.joinedAt).toISOString(),
-    }
-  });
+    .filter((m): m is PopulateWorkspaceMemberLean & { userId: PopulateUserLean } => Boolean(m.userId))
+    .map((member) => {
+      return {
+        // o lean devolve ObjectId: sem toString a comparação com o userId (texto) nunca batia
+        id: member.userId._id.toString(),
+        name: member.userId.username,
+        email: member.userId.email,
+        image: member.userId.image,
+        role: member.role,
+        joinedAt: new Date(member.joinedAt).toISOString(),
+      };
+    });
 
   const currentMember = members.find((member) => member.id === userId);
   if (!currentMember) {
@@ -126,14 +119,13 @@ export async function getWorkspaceBySlug(
   const workspaceProjects = await Project.find({ workspaceId: workspace?._id })
     .select("_id name key")
     .sort({ createdAt: 1 })
-    .lean<ProjectSummaryLean[]>()
+    .lean<ProjectSummaryLean[]>();
 
   const projects: WorkspaceProjectSummaryDTO[] = workspaceProjects.map((project) => ({
     id: project._id.toString(),
     name: project.name,
     key: project.key,
   }));
-
 
   return {
     id: workspace._id.toString(),
@@ -157,59 +149,56 @@ export async function getWorkspaceBySlug(
   };
 }
 
-
 export async function updateWorkspace(
-    userId: string,
-    input: UpdateWorkspaceInput
-): Promise<ActionResult<{ id: string, name: string, slug: string}>> {
+  userId: string,
+  input: UpdateWorkspaceInput
+): Promise<ActionResult<{ id: string; name: string; slug: string }>> {
+  const permission = await verifyWorkspacePermission({
+    workspaceId: input.workspaceId,
+    userId,
+    allowedRoles: ["ADMIN", "OWNER"],
+  });
 
-    const permission = await verifyWorkspacePermission({
-        workspaceId: input.workspaceId, 
-        userId, 
-        allowedRoles: ["ADMIN", "OWNER"]
-    });
+  if (!permission.authorized) {
+    return {
+      success: false,
+      error: permission.error,
+    };
+  }
 
-    if (!permission.authorized) {
-        return {
-            success: false,
-            error: permission.error
-        }
-    }
+  await dbConnect();
 
-    await dbConnect();
-
-    const updated = await Workspace.findByIdAndUpdate(
-        input.workspaceId,
-        { $set: { name: input.name } },
-        { new: true, runValidators: true }
-    )
+  const updated = await Workspace.findByIdAndUpdate(
+    input.workspaceId,
+    { $set: { name: input.name } },
+    { new: true, runValidators: true }
+  )
     .select("_id name slug")
     .lean<{ _id: Types.ObjectId; name: string; slug: string }>();
 
-    if (!updated) {
-        return { success: false, error: "Workspace não encontrado." };
-    }
+  if (!updated) {
+    return { success: false, error: "Workspace não encontrado." };
+  }
 
-    return {
-        success: true,
-        data: {
-            id: updated._id.toString(),
-            name: updated.name,
-            slug: updated.slug,
-        },
-    };
+  return {
+    success: true,
+    data: {
+      id: updated._id.toString(),
+      name: updated.name,
+      slug: updated.slug,
+    },
+  };
 }
-
 
 export async function deleteWorkspace(
   userId: string,
   workspaceId: string
-): Promise<ActionResult<{ id: string, name: string }>> {
+): Promise<ActionResult<{ id: string; name: string }>> {
   if (!Types.ObjectId.isValid(workspaceId)) {
     return {
       success: false,
-      error: "ID de workspace inválido."
-    }
+      error: "ID de workspace inválido.",
+    };
   }
 
   const permission = await verifyWorkspacePermission({
@@ -221,16 +210,20 @@ export async function deleteWorkspace(
   if (!permission.authorized) {
     return {
       success: false,
-      error: permission.error
-    }
+      error: permission.error,
+    };
   }
 
   await dbConnect();
 
-  const workspace = await Workspace.findById(workspaceId).select("_id name").lean<{ _id: Types.ObjectId; name: string }>();
+  const workspace = await Workspace.findById(workspaceId)
+    .select("_id name")
+    .lean<{ _id: Types.ObjectId; name: string }>();
   if (!workspace) return { success: false, error: "Workspace não encontrado." };
 
-  const projectIds = (await Project.find({ workspaceId }).select("_id").lean<{ _id: Types.ObjectId }[]>()).map((p) => p._id);
+  const projectIds = (
+    await Project.find({ workspaceId }).select("_id").lean<{ _id: Types.ObjectId }[]>()
+  ).map((p) => p._id);
 
   // O Mongo não tem exclusão em cascata: apaga tudo que pertence ao workspace numa transação,
   // para não sobrar projeto, tarefa ou documento órfão se algo falhar no meio
@@ -252,9 +245,7 @@ export async function deleteWorkspace(
     success: true,
     data: {
       id: workspace._id.toString(),
-      name: workspace.name
-    }
-  }
-  
+      name: workspace.name,
+    },
+  };
 }
-

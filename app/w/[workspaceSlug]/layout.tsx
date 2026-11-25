@@ -40,7 +40,10 @@ async function WorkspaceSidebar({ params }: { params: Promise<{ workspaceSlug: s
 
 function SidebarSkeleton() {
   return (
-    <div className="hidden w-(--sidebar-width) shrink-0 flex-col gap-3 border-r bg-sidebar p-3 md:flex" aria-hidden="true">
+    <div
+      className="hidden w-(--sidebar-width) shrink-0 flex-col gap-3 border-r bg-sidebar p-3 md:flex"
+      aria-hidden="true"
+    >
       <Skeleton className="h-12" />
       <Skeleton className="h-8" />
       <Skeleton className="h-8" />

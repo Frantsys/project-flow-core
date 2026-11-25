@@ -1,6 +1,5 @@
 import { WorkspaceRole } from "./models";
 
-
 export interface WorkspaceSummaryDTO {
   id: string;
   name: string;
@@ -46,7 +45,6 @@ export interface WorkspaceDTO {
   updatedAt: string;
 }
 
-
 export interface ProjectDTO {
   id: string;
   workspaceId: string;
@@ -59,14 +57,13 @@ export interface ProjectDTO {
   updatedAt: string;
 }
 
-
 export type TaskType = "TASK" | "BUG" | "STORY" | "EPIC";
 export type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 export type SprintStatus = "PLANNED" | "ACTIVE" | "COMPLETED";
 
 export interface TaskDTO {
   id: string;
-  code: string; 
+  code: string;
   title: string;
   type: TaskType;
   status: string; // será usado no frontend para distribuir as colunas de tarefas, estilo kanban

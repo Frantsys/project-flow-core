@@ -41,7 +41,13 @@ export function DocTree({ workspace, projects, documents }: DocTreeProps) {
     <nav aria-label="Documentos" className="flex flex-col gap-1 p-3">
       <div className="flex items-center justify-between px-1 pb-2">
         <h2 className="text-sm font-semibold">Documentos</h2>
-        <NewDocumentButton workspaceId={workspace.id} workspaceSlug={workspace.slug} variant="ghost" size="icon-sm" aria-label="Novo documento">
+        <NewDocumentButton
+          workspaceId={workspace.id}
+          workspaceSlug={workspace.slug}
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Novo documento"
+        >
           <Plus aria-hidden="true" />
         </NewDocumentButton>
       </div>
@@ -61,7 +67,9 @@ export function DocTree({ workspace, projects, documents }: DocTreeProps) {
         matches.length === 0 ? (
           <p className="px-2 text-[13px] text-muted-foreground">Nenhum documento com esse título.</p>
         ) : (
-          matches.map((doc) => <DocLink key={doc.id} doc={doc} slug={workspace.slug} active={doc.id === activeId} depth={0} />)
+          matches.map((doc) => (
+            <DocLink key={doc.id} doc={doc} slug={workspace.slug} active={doc.id === activeId} depth={0} />
+          ))
         )
       ) : (
         groups.map((group) => {
@@ -88,7 +96,14 @@ export function DocTree({ workspace, projects, documents }: DocTreeProps) {
                 <p className="px-2 text-[13px] text-muted-foreground">Nenhum documento ainda.</p>
               ) : (
                 roots.map((doc) => (
-                  <DocNode key={doc.id} doc={doc} byParent={byParent} slug={workspace.slug} activeId={activeId} depth={0} />
+                  <DocNode
+                    key={doc.id}
+                    doc={doc}
+                    byParent={byParent}
+                    slug={workspace.slug}
+                    activeId={activeId}
+                    depth={0}
+                  />
                 ))
               )}
             </div>
@@ -136,13 +151,30 @@ function DocNode({
       </div>
       {open &&
         children.map((child) => (
-          <DocNode key={child.id} doc={child} byParent={byParent} slug={slug} activeId={activeId} depth={depth + 1} />
+          <DocNode
+            key={child.id}
+            doc={child}
+            byParent={byParent}
+            slug={slug}
+            activeId={activeId}
+            depth={depth + 1}
+          />
         ))}
     </div>
   );
 }
 
-function DocLink({ doc, slug, active, depth }: { doc: DocumentSummaryDTO; slug: string; active: boolean; depth: number }) {
+function DocLink({
+  doc,
+  slug,
+  active,
+  depth,
+}: {
+  doc: DocumentSummaryDTO;
+  slug: string;
+  active: boolean;
+  depth: number;
+}) {
   return (
     <Link
       href={`/w/${slug}/docs/${doc.id}`}

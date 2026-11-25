@@ -11,7 +11,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { CreateWorkspaceDialog } from "@/components/workspaces/create-workspace-dialog";
 
 export const metadata: Metadata = { title: "Workspaces" };
@@ -29,7 +36,9 @@ export default function WorkspacesPage() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="mb-1 text-2xl font-semibold tracking-tight">Seus workspaces</h1>
-            <p className="text-sm text-muted-foreground">Escolha um workspace para continuar ou crie um novo.</p>
+            <p className="text-sm text-muted-foreground">
+              Escolha um workspace para continuar ou crie um novo.
+            </p>
           </div>
           <CreateWorkspaceDialog
             trigger={
@@ -114,7 +123,11 @@ async function WorkspaceGrid() {
 
 function GridSkeleton() {
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4" aria-busy="true" aria-label="Carregando workspaces">
+    <div
+      className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4"
+      aria-busy="true"
+      aria-label="Carregando workspaces"
+    >
       {[0, 1, 2].map((i) => (
         <Skeleton key={i} className="h-[132px] rounded-xl" />
       ))}

@@ -40,8 +40,18 @@ export function AppSidebar({ user, workspace, workspaces }: AppSidebarProps) {
 
   const nav = [
     { href: base, label: "Visão geral", icon: House, active: pathname === base },
-    { href: `${base}/docs`, label: "Documentos", icon: FileText, active: pathname.startsWith(`${base}/docs`) },
-    { href: `${base}/settings`, label: "Configurações", icon: SlidersHorizontal, active: pathname.startsWith(`${base}/settings`) },
+    {
+      href: `${base}/docs`,
+      label: "Documentos",
+      icon: FileText,
+      active: pathname.startsWith(`${base}/docs`),
+    },
+    {
+      href: `${base}/settings`,
+      label: "Configurações",
+      icon: SlidersHorizontal,
+      active: pathname.startsWith(`${base}/settings`),
+    },
   ];
 
   return (
@@ -61,7 +71,9 @@ export function AppSidebar({ user, workspace, workspaces }: AppSidebarProps) {
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-60">
-            <DropdownMenuLabel className="text-xs text-muted-foreground">Trocar de workspace</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
+              Trocar de workspace
+            </DropdownMenuLabel>
             {workspaces.map((ws) => (
               <DropdownMenuItem key={ws.id} asChild>
                 <Link href={`/w/${ws.slug}`}>
