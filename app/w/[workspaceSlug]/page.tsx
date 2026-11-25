@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { FolderKanban, Plus } from "lucide-react";
 import { getWorkspace, requireUser } from "@/lib/session";
 import { getProjectsByWorkspaceSlug } from "@/server/services/project.service";
+import { getWorkspaceHistory } from "@/server/services/history.service";
+import { HistoryList } from "@/components/history-list";
 import { roleLabel } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,12 +27,13 @@ export default function WorkspaceOverviewPage({ params }: PageProps<"/w/[workspa
 async function Overview({ params }: { params: Promise<{ workspaceSlug: string }> }) {
   const { workspaceSlug } = await params;
   const user = await requireUser();
-  const [workspace, projects] = await Promise.all([
+  const [workspace, projects, activity] = await Promise.all([
     getWorkspace(workspaceSlug, user.id),
     getProjectsByWorkspaceSlug(workspaceSlug, user.id),
+    getWorkspaceHistory(workspaceSlug, user.id, 8),
   ]);
 
-  if (!workspace || !projects) notFound();
+  if (!workspace || !projects || !activity) notFound();
 
   const canManage = workspace.currentUserRole !== "MEMBER";
   const newProject = canManage ? (
@@ -102,7 +105,8 @@ async function Overview({ params }: { params: Promise<{ workspaceSlug: string }>
         )}
       </section>
 
-      <Card className="max-w-2xl">
+      <div className="grid gap-4 lg:grid-cols-2">
+      <Card>
         <CardHeader>
           <CardTitle className="font-semibold">Membros</CardTitle>
           <CardAction>
@@ -130,6 +134,21 @@ async function Overview({ params }: { params: Promise<{ workspaceSlug: string }>
           </ItemGroup>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-semibold">Atividade recente</CardTitle>
+          <CardAction>
+            <Button variant="link" size="sm" asChild>
+              <Link href={`/w/${workspace.slug}/settings?tab=historico`}>Ver tudo</Link>
+            </Button>
+          </CardAction>
+        </CardHeader>
+        <CardContent>
+          <HistoryList entries={activity} />
+        </CardContent>
+      </Card>
+      </div>
     </div>
   );
 }
@@ -143,7 +162,7 @@ function OverviewSkeleton() {
           <Skeleton key={i} className="h-28 rounded-xl" />
         ))}
       </div>
-      <Skeleton className="h-56 max-w-2xl rounded-xl" />
+      <Skeleton className="h-56 rounded-xl" />
     </div>
   );
 }
