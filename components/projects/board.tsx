@@ -22,7 +22,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { moveTaskAction } from "@/server/actions/task.actions";
 import { useRefreshOnFocus } from "@/hooks/use-refresh-on-focus";
 import { filterTasks, hasFilters, parseTaskFilters } from "@/lib/task-filters";
-import { priorityBadge, shortDate } from "@/lib/labels";
+import { pointsLabel, priorityBadge, shortDate } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import type { StatusDTO, TaskDTO } from "@/server/db/types";
 import { Badge } from "@/components/ui/badge";
@@ -322,7 +322,7 @@ function SortableTaskCard({
         <div className="flex items-center gap-2 text-xs text-text-secondary">
           {task.storyPoints !== null && (
             <Badge variant="outline" className="h-5 px-1.5">
-              {task.storyPoints} pts
+              {pointsLabel(task.storyPoints)}
             </Badge>
           )}
           {due && (

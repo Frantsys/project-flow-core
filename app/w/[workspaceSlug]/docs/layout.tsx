@@ -6,7 +6,7 @@ import { DocTree } from "@/components/docs/doc-tree";
 
 export default function DocsLayout({ children, params }: LayoutProps<"/w/[workspaceSlug]/docs">) {
   return (
-    <div className="flex min-h-svh flex-wrap">
+    <div data-full-height className="flex min-h-svh flex-wrap">
       <aside className="flex-[1_1_240px] border-b md:max-w-[280px] md:border-r md:border-b-0">
         <Suspense fallback={<TreeSkeleton />}>
           <Tree params={params} />

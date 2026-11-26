@@ -1,3 +1,4 @@
+import { todayInBrazil } from "@/lib/labels";
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -28,8 +29,6 @@ export default function CalendarPage({
 }
 
 const WEEKDAYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
-const todayInBrazil = () =>
-  new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 const monthLabel = (y: number, m: number) =>
   new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }).format(
     new Date(Date.UTC(y, m, 1))

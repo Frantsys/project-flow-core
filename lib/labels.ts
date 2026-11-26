@@ -52,6 +52,13 @@ export function shortDate(iso: string, now = new Date()) {
 }
 
 /** "12/03/2026" */
+/** "1 pt", "5 pts". */
+export const pointsLabel = (n: number) => `${n} ${n === 1 ? "pt" : "pts"}`;
+
+/** Data de hoje no Brasil, "AAAA-MM-DD" (o prazo das tarefas é guardado assim, sem fuso). */
+export const todayInBrazil = () =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+
 export function fullDate(iso: string) {
   return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(iso));
 }

@@ -18,7 +18,9 @@ export default function WorkspaceLayout({ children, params }: LayoutProps<"/w/[w
         <WorkspaceSidebar params={params} />
       </Suspense>
       {/* min-w-0: sem isso o quadro largo estica a página inteira em vez de rolar dentro dele */}
-      <SidebarInset className="min-w-0">
+      {/* pb-20: o fim de cada página rola para cima do botão flutuante do assistente; as telas
+          de altura cheia (documentos) já deixam espaço e não rolam por causa dele */}
+      <SidebarInset className="min-w-0 pb-20 has-data-full-height:pb-0">
         <header className="flex h-12 items-center gap-2 border-b px-4 md:hidden">
           <SidebarTrigger aria-label="Abrir menu" />
           <Logo />

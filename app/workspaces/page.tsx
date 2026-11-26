@@ -1,14 +1,11 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Building2, ListChecks, Plus } from "lucide-react";
-import { CommandMenuButton } from "@/components/command-menu";
-import { NotificationBell } from "@/components/notification-bell";
+import { Building2, Plus } from "lucide-react";
+import { AppHeader } from "@/components/app-header";
 import { requireUser } from "@/lib/session";
 import { getUserWorkspaces } from "@/server/services/workspace.service";
 import { fullDate, initials, roleLabel } from "@/lib/labels";
-import { Logo } from "@/components/logo";
-import { UserMenu } from "@/components/user-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,22 +25,7 @@ export const metadata: Metadata = { title: "Workspaces" };
 export default function WorkspacesPage() {
   return (
     <div className="min-h-svh bg-sidebar">
-      <header className="flex h-14 items-center justify-between border-b bg-background px-6">
-        <Logo />
-        <div className="flex items-center gap-2">
-          <CommandMenuButton className="hidden w-56 sm:flex" />
-          <NotificationBell />
-          <Button asChild variant="ghost">
-            <Link href="/my-work">
-              <ListChecks aria-hidden="true" />
-              Minhas tarefas
-            </Link>
-          </Button>
-          <Suspense fallback={<Skeleton className="size-8 rounded-full" />}>
-            <AccountMenu />
-          </Suspense>
-        </div>
-      </header>
+      <AppHeader current="/workspaces" />
       <main className="mx-auto flex max-w-[1040px] flex-col gap-6 px-6 py-10">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -67,11 +49,6 @@ export default function WorkspacesPage() {
       </main>
     </div>
   );
-}
-
-async function AccountMenu() {
-  const user = await requireUser();
-  return <UserMenu user={user} />;
 }
 
 async function WorkspaceGrid() {

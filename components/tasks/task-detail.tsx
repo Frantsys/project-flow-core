@@ -122,7 +122,9 @@ export function TaskDetail({
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex items-center gap-2.5 border-b px-5 py-3">
         <TaskTypeIndicator type={task.type} />
-        <span className="font-mono text-[13px] font-medium text-text-secondary">{task.code}</span>
+        <span className="font-mono text-[13px] font-medium whitespace-nowrap text-text-secondary">
+          {task.code}
+        </span>
         <Badge variant="outline">{typeLabel[task.type]}</Badge>
         {pending && <Spinner className="text-muted-foreground" />}
         <span className="flex-1" />

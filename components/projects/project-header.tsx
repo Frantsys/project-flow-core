@@ -63,10 +63,11 @@ export function ProjectHeader({
               <Link
                 href={`${base}${v.path}`}
                 aria-current={v.id === view ? "page" : undefined}
+                aria-label={v.label}
                 className="inline-flex h-full items-center gap-1.5 rounded-md border border-transparent px-1.5 text-sm font-medium whitespace-nowrap text-foreground/60 outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-[current=page]:bg-background aria-[current=page]:text-foreground aria-[current=page]:shadow-sm dark:text-muted-foreground dark:aria-[current=page]:border-input dark:aria-[current=page]:bg-input/30 [&_svg]:size-4 [&_svg]:shrink-0"
               >
                 <v.icon aria-hidden="true" />
-                {v.label}
+                <span className={v.id === view ? undefined : "hidden sm:inline"}>{v.label}</span>
               </Link>
             </li>
           ))}

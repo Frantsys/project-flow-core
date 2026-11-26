@@ -1,13 +1,10 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowLeft, BellOff } from "lucide-react";
+import { BellOff } from "lucide-react";
 import { requireUser } from "@/lib/session";
 import { getNotifications } from "@/server/services/notification.service";
-import { Logo } from "@/components/logo";
+import { AppHeader } from "@/components/app-header";
 import { InboxList } from "@/components/inbox-list";
-import { CommandMenuButton } from "@/components/command-menu";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 
@@ -16,18 +13,7 @@ export const metadata: Metadata = { title: "Notificações" };
 export default function InboxPage() {
   return (
     <div className="min-h-svh bg-sidebar">
-      <header className="flex h-14 items-center justify-between gap-3 border-b bg-background px-6">
-        <Logo />
-        <div className="flex items-center gap-2">
-          <CommandMenuButton className="hidden w-56 sm:flex" />
-          <Button asChild variant="ghost">
-            <Link href="/workspaces">
-              <ArrowLeft aria-hidden="true" />
-              Workspaces
-            </Link>
-          </Button>
-        </div>
-      </header>
+      <AppHeader />
       <main className="mx-auto flex max-w-[760px] flex-col gap-6 px-6 py-10">
         <div>
           <h1 className="mb-1 text-2xl font-semibold tracking-tight">Notificações</h1>

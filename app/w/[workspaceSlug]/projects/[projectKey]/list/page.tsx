@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -5,7 +6,7 @@ import { ArrowDown, ArrowUp } from "lucide-react";
 import { getWorkspace, requireUser } from "@/lib/session";
 import { getProjectByKey } from "@/server/services/project.service";
 import { filterTasks, parseTaskFilters } from "@/lib/task-filters";
-import { fullDate, priorityBadge } from "@/lib/labels";
+import { fullDate, priorityBadge, todayInBrazil } from "@/lib/labels";
 import type { TaskDTO } from "@/server/db/types";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -61,6 +62,9 @@ async function TaskList({
   const desc = get("dir") === "desc";
   const statusIndex = new Map(project.statuses.map((s, i) => [s.id, i]));
   const statusName = new Map(project.statuses.map((s) => [s.id, s.name]));
+  const doneIds = new Set(project.statuses.filter((s) => s.category === "DONE").map((s) => s.id));
+  const today = todayInBrazil();
+  const overdue = (t: TaskDTO) => !!t.dueDate && t.dueDate.slice(0, 10) < today && !doneIds.has(t.statusId);
   const number = (code: string) => Number(code.split("-")[1] ?? 0);
 
   // valores vazios (sem prazo, sem pontos, sem responsável) ficam sempre no fim
@@ -177,8 +181,11 @@ async function TaskList({
                       )}
                     </TableCell>
                     <TableCell className="text-text-secondary tabular-nums">{t.storyPoints ?? "—"}</TableCell>
-                    <TableCell className="text-text-secondary">
+                    <TableCell
+                      className={cn("text-text-secondary", overdue(t) && "font-medium text-destructive-text")}
+                    >
                       {t.dueDate ? fullDate(t.dueDate) : "—"}
+                      {overdue(t) && <span className="sr-only"> (atrasada)</span>}
                     </TableCell>
                   </TableRow>
                 );

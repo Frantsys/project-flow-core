@@ -1,18 +1,14 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowLeft, PartyPopper } from "lucide-react";
+import { PartyPopper } from "lucide-react";
 import { requireUser } from "@/lib/session";
 import { getMyOpenTasks, groupByDue } from "@/server/services/my-work.service";
-import { fullDate, priorityBadge } from "@/lib/labels";
+import { fullDate, priorityBadge, todayInBrazil } from "@/lib/labels";
 import { cn } from "@/lib/utils";
-import { Logo } from "@/components/logo";
-import { UserMenu } from "@/components/user-menu";
-import { CommandMenuButton } from "@/components/command-menu";
-import { NotificationBell } from "@/components/notification-bell";
+import { AppHeader } from "@/components/app-header";
 import { TaskTypeIndicator } from "@/components/projects/task-type";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
@@ -22,22 +18,7 @@ export const metadata: Metadata = { title: "Minhas tarefas" };
 export default function MyWorkPage() {
   return (
     <div className="min-h-svh bg-sidebar">
-      <header className="flex h-14 items-center justify-between gap-3 border-b bg-background px-6">
-        <Logo />
-        <div className="flex items-center gap-2">
-          <CommandMenuButton className="hidden w-56 sm:flex" />
-          <NotificationBell />
-          <Button asChild variant="ghost">
-            <Link href="/workspaces">
-              <ArrowLeft aria-hidden="true" />
-              Workspaces
-            </Link>
-          </Button>
-          <Suspense fallback={<Skeleton className="size-8 rounded-full" />}>
-            <Account />
-          </Suspense>
-        </div>
-      </header>
+      <AppHeader current="/my-work" />
       <main className="mx-auto flex max-w-[880px] flex-col gap-6 px-6 py-10">
         <div>
           <h1 className="mb-1 text-2xl font-semibold tracking-tight">Minhas tarefas</h1>
@@ -52,13 +33,6 @@ export default function MyWorkPage() {
     </div>
   );
 }
-
-async function Account() {
-  return <UserMenu user={await requireUser()} />;
-}
-
-const todayInBrazil = () =>
-  new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 
 async function MyTasks() {
   const user = await requireUser();

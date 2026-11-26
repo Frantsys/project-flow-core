@@ -1,5 +1,5 @@
 import "server-only";
-import { priorityBadge, roleLabel, typeLabel } from "@/lib/labels";
+import { priorityBadge, roleLabel, todayInBrazil, typeLabel } from "@/lib/labels";
 import { getDocument } from "./document.service";
 import { getMyOpenTasks } from "./my-work.service";
 import { getProjectByKey } from "./project.service";
@@ -28,7 +28,7 @@ export async function buildBuddyContext(pathname: string, userId: string) {
   if (!workspace) return null;
 
   const me = workspace.members.find((m) => m.id === userId);
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+  const today = todayInBrazil();
 
   const lines = [
     `Hoje: ${today}.`,

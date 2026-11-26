@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getWorkspace, requireUser } from "@/lib/session";
 import { getProjectByKey } from "@/server/services/project.service";
 import { projectMetrics } from "@/lib/project-metrics";
-import { fullDate } from "@/lib/labels";
+import { fullDate, todayInBrazil } from "@/lib/labels";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProjectHeader } from "@/components/projects/project-header";
 import { BarList, ChartCard, ColumnChart, Meter, StatTile } from "@/components/reports/charts";
@@ -17,9 +17,6 @@ export default function ReportsPage({
     </Suspense>
   );
 }
-
-const todayInBrazil = () =>
-  new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 
 async function Reports({ params }: { params: Promise<{ workspaceSlug: string; projectKey: string }> }) {
   const { workspaceSlug, projectKey } = await params;

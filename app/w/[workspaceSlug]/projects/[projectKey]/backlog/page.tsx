@@ -7,7 +7,7 @@ import { notFound } from "next/navigation";
 import { ChevronDown, Plus } from "lucide-react";
 import { getWorkspace, requireUser } from "@/lib/session";
 import { getProjectByKey } from "@/server/services/project.service";
-import { fullDate, priorityBadge, sprintBadge } from "@/lib/labels";
+import { fullDate, pointsLabel, priorityBadge, sprintBadge } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -189,7 +189,8 @@ function SprintSection({
           {badge && <Badge variant={badge.variant}>{badge.label}</Badge>}
         </CardTitle>
         <CardDescription className="text-[13px]">
-          {tasks.length} {tasks.length === 1 ? "tarefa" : "tarefas"} · {points} pts{dates}
+          {tasks.length} {tasks.length === 1 ? "tarefa" : "tarefas"} · {pointsLabel(points)}
+          {dates}
           {sprint?.goal && <span className="block text-text-secondary">Meta: {sprint.goal}</span>}
         </CardDescription>
         {actions && <CardAction>{actions}</CardAction>}
@@ -240,7 +241,7 @@ function SprintSection({
                       <Badge variant={priority.variant}>{priority.label}</Badge>
                     </TableCell>
                     <TableCell className="w-20 text-text-secondary tabular-nums">
-                      {task.storyPoints ?? "—"} pts
+                      {task.storyPoints === null ? "—" : pointsLabel(task.storyPoints)}
                     </TableCell>
                     <TableCell className="w-12 pr-5">
                       {task.assignee ? (
