@@ -38,6 +38,9 @@ workspace de exemplo sem cadastro (só leitura).
 - **IA na tarefa** (opcional): resumo da tarefa e sugestão de subtarefas com o Claude Haiku 5.5
   (`ANTHROPIC_API_KEY`) ou o Gemini 3.5 Flash-Lite (`GEMINI_API_KEY`), limitado a 50 usos por
   workspace por dia.
+- **Assistente na tela** (com a IA ligada): painel flutuante que acompanha a pessoa pelo app, sabe
+  qual projeto, tarefa ou documento está aberto e responde sobre andamento, prazos e prioridades, ou
+  ajuda a escrever descrições e critérios de aceite. Só lê: não altera nada. 100 mensagens por dia.
 - **API pública v1** só leitura, com tokens por workspace e especificação OpenAPI em
   `/api/v1/openapi.json` ([ADR 010](docs/adrs/010-api-publica-v1.md)).
 - **Página inicial pública**, termos de uso, política de privacidade (LGPD), imagem de compartilhamento,

@@ -5,6 +5,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Logo } from "@/components/logo";
 import { DemoBanner } from "@/components/demo-banner";
+import { Buddy } from "@/components/buddy";
+import { aiEnabled } from "@/server/lib/ai";
 import { getWorkspace, requireUser } from "@/lib/session";
 import { getUserWorkspaces } from "@/server/services/workspace.service";
 
@@ -26,6 +28,9 @@ export default function WorkspaceLayout({ children, params }: LayoutProps<"/w/[w
         </Suspense>
         {children}
       </SidebarInset>
+      <Suspense fallback={null}>
+        <BuddyGate />
+      </Suspense>
     </SidebarProvider>
   );
 }
@@ -46,6 +51,12 @@ async function WorkspaceSidebar({ params }: { params: Promise<{ workspaceSlug: s
 async function DemoNotice() {
   const user = await requireUser();
   return user.isDemo ? <DemoBanner /> : null;
+}
+
+/** O assistente só aparece com a IA configurada e fora da demonstração (que não usa a IA). */
+async function BuddyGate() {
+  const user = await requireUser();
+  return aiEnabled() && !user.isDemo ? <Buddy /> : null;
 }
 
 function SidebarSkeleton() {
