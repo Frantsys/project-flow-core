@@ -3,12 +3,21 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { isTyping, SHORTCUTS_EVENT } from "./command-menu";
+import { MY_WORK_EVENT } from "./my-work-panel";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 /** G e depois a letra: vai para a tela. As do projeto só valem dentro de um projeto. */
-const GO: { key: string; label: string; path: (base: string, project?: string) => string | null }[] = [
+const toggleMyWork = () => window.dispatchEvent(new Event(MY_WORK_EVENT));
+
+const GO: {
+  key: string;
+  label: string;
+  path: (base: string, project?: string) => string | null;
+  /** Ação no lugar da navegação (Minhas tarefas abre um painel). */
+  run?: () => void;
+}[] = [
   { key: "i", label: "Visão geral do workspace", path: (b) => b },
-  { key: "m", label: "Minhas tarefas", path: () => "/my-work" },
+  { key: "m", label: "Minhas tarefas (abre o painel)", path: () => null, run: () => toggleMyWork() },
   { key: "d", label: "Documentos", path: (b) => `${b}/docs` },
   { key: "q", label: "Quadro do projeto", path: (b, p) => (p ? `${b}/projects/${p}` : null) },
   { key: "b", label: "Backlog do projeto", path: (b, p) => (p ? `${b}/projects/${p}/backlog` : null) },
@@ -73,8 +82,12 @@ export function KeyboardShortcuts() {
 
       if (Date.now() - pendingG.current < 1500) {
         pendingG.current = 0;
-        const to = GO.find((g) => g.key === key)?.path(base, project);
-        if (to) {
+        const go = GO.find((g) => g.key === key);
+        const to = go?.path(base, project);
+        if (go?.run) {
+          e.preventDefault();
+          go.run();
+        } else if (to) {
           e.preventDefault();
           router.push(to);
         }

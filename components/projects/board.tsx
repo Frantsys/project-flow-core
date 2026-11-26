@@ -34,6 +34,7 @@ import { TaskTypeIndicator } from "./task-type";
 import { CreateTaskDialog } from "./create-task-dialog";
 import { TaskStatusMenu } from "./task-status-menu";
 import { TagChip } from "@/components/tasks/task-tags";
+import { AddColumn, CollapsedColumn, ColumnHeader, useCollapsedColumns } from "./column-controls";
 
 type Columns = Record<string, TaskDTO[]>;
 
@@ -48,6 +49,8 @@ interface BoardProps {
   /** Prefixo do link das tarefas: /w/slug/projects/KEY/tasks */
   taskHref: string;
   now: string;
+  /** Admin e dono: adicionam, renomeiam, movem e excluem colunas. */
+  canManageColumns?: boolean;
 }
 
 /**
@@ -55,7 +58,16 @@ interface BoardProps {
  * volta ao estado anterior se o servidor recusar. Com filtros ativos o arraste fica desligado,
  * porque a posição entre tarefas escondidas seria ambígua.
  */
-export function Board({ projectId, statuses, tasks, currentUserId, taskHref, now }: BoardProps) {
+export function Board({
+  projectId,
+  statuses,
+  tasks,
+  currentUserId,
+  taskHref,
+  now,
+  canManageColumns = false,
+}: BoardProps) {
+  const { collapsed, toggle } = useCollapsedColumns(projectId);
   const router = useRouter();
   const params = useSearchParams();
   const filters = parseTaskFilters((k) => params.get(k));
@@ -65,8 +77,10 @@ export function Board({ projectId, statuses, tasks, currentUserId, taskHref, now
   const [source, setSource] = useState(tasks);
   const [columns, setColumns] = useState(() => group(statuses, tasks));
   const [snapshot, setSnapshot] = useState<Columns | null>(null);
-  if (source !== tasks) {
+  const [sourceStatuses, setSourceStatuses] = useState(statuses);
+  if (source !== tasks || sourceStatuses !== statuses) {
     setSource(tasks);
+    setSourceStatuses(statuses);
     setColumns(group(statuses, tasks));
   }
 
@@ -174,20 +188,40 @@ export function Board({ projectId, statuses, tasks, currentUserId, taskHref, now
           {statuses.map((status) => {
             const all = columns[status.id] ?? [];
             const visible = filtering ? filterTasks(all, filters, currentUserId) : all;
+            if (collapsed.has(status.id)) {
+              return (
+                <DroppableCollapsed
+                  key={status.id}
+                  status={status}
+                  count={visible.length}
+                  onExpand={() => toggle(status.id)}
+                />
+              );
+            }
             return (
               <Column
                 key={status.id}
                 status={status}
-                count={visible.length}
                 header={
-                  <CreateTaskDialog
+                  <ColumnHeader
                     projectId={projectId}
                     statuses={statuses}
-                    defaultStatusId={status.id}
-                    trigger={
-                      <Button variant="ghost" size="icon-sm" aria-label={`Nova tarefa em ${status.name}`}>
-                        <Plus aria-hidden="true" />
-                      </Button>
+                    status={status}
+                    count={visible.length}
+                    total={all.length}
+                    canManage={canManageColumns}
+                    onCollapse={() => toggle(status.id)}
+                    addTask={
+                      <CreateTaskDialog
+                        projectId={projectId}
+                        statuses={statuses}
+                        defaultStatusId={status.id}
+                        trigger={
+                          <Button variant="ghost" size="icon-sm" aria-label={`Nova tarefa em ${status.name}`}>
+                            <Plus aria-hidden="true" />
+                          </Button>
+                        }
+                      />
                     }
                   />
                 }
@@ -215,20 +249,24 @@ export function Board({ projectId, statuses, tasks, currentUserId, taskHref, now
               </Column>
             );
           })}
+          {canManageColumns && <AddColumn projectId={projectId} statuses={statuses} />}
         </div>
       </div>
     </DndContext>
   );
 }
 
+function DroppableCollapsed(props: { status: StatusDTO; count: number; onExpand: () => void }) {
+  const { setNodeRef, isOver } = useDroppable({ id: props.status.id });
+  return <CollapsedColumn {...props} dropRef={setNodeRef} isOver={isOver} />;
+}
+
 function Column({
   status,
-  count,
   header,
   children,
 }: {
   status: StatusDTO;
-  count: number;
   header: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -243,13 +281,7 @@ function Column({
         isOver && "bg-accent"
       )}
     >
-      <div className="flex items-center justify-between px-1">
-        <h2 id={`col-${status.id}`} className="flex items-center gap-2 text-sm font-semibold">
-          {status.name}
-          <span className="font-medium text-muted-foreground">{count}</span>
-        </h2>
-        {header}
-      </div>
+      {header}
       {children}
     </section>
   );

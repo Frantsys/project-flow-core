@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { STATUS_COLOR_KEYS } from "@/lib/status-colors";
 
 const usernameField = z
   .string()
@@ -336,10 +337,21 @@ export const updateProjectStatusesSchema = z
           id: z.string().regex(objectIdRegex).optional(),
           name: z.string().trim().min(1, "Dê um nome ao status.").max(40, "Use no máximo 40 caracteres."),
           category: statusCategorySchema,
+          // sem o campo = mantém o que estava (o diálogo de colunas não mexe em cor nem limite)
+          color: z.enum(STATUS_COLOR_KEYS).nullable().optional(),
+          wipLimit: z
+            .number()
+            .int("Use um número inteiro.")
+            .min(1, "O limite precisa ser de pelo menos 1.")
+            .max(999, "Use um limite de até 999.")
+            .nullable()
+            .optional(),
         })
       )
       .min(2, "O quadro precisa de pelo menos 2 status.")
-      .max(12, "Use no máximo 12 status."),
+      .max(20, "Use no máximo 20 colunas."),
+    // tarefas das colunas removidas: id da coluna removida → id da coluna de destino
+    moveTasksTo: z.record(z.string().regex(objectIdRegex), z.string().regex(objectIdRegex)).optional(),
   })
   .superRefine(({ statuses }, ctx) => {
     const names = statuses.map((s) => s.name.toLocaleLowerCase("pt-BR"));

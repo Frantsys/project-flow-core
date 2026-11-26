@@ -1,3 +1,4 @@
+import type { StatusColor } from "@/lib/status-colors";
 import type { StatusCategory, WorkspaceRole } from "./models";
 
 export type { StatusCategory };
@@ -6,6 +7,8 @@ export interface StatusDTO {
   id: string;
   name: string;
   category: StatusCategory;
+  color: StatusColor | null;
+  wipLimit: number | null;
 }
 
 export interface WorkspaceSummaryDTO {

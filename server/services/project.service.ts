@@ -1,4 +1,5 @@
 import dbConnect from "@/lib/db";
+import { STATUS_COLORS, type StatusColor } from "@/lib/status-colors";
 import { Types } from "mongoose";
 import { Workspace, Project, Sprint, Task } from "../db/models";
 import {
@@ -16,12 +17,20 @@ interface WorkspaceIdLean {
   _id: Types.ObjectId;
 }
 
-type StatusLean = { _id: Types.ObjectId; name: string; category: StatusDTO["category"] };
+type StatusLean = {
+  _id: Types.ObjectId;
+  name: string;
+  category: StatusDTO["category"];
+  color?: string | null;
+  wipLimit?: number | null;
+};
 
 export const toStatusDTO = (s: StatusLean): StatusDTO => ({
   id: s._id.toString(),
   name: s.name,
   category: s.category,
+  color: s.color && s.color in STATUS_COLORS ? (s.color as StatusColor) : null,
+  wipLimit: s.wipLimit ?? null,
 });
 
 interface ProjectLean {

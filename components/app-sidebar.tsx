@@ -1,19 +1,12 @@
 "use client";
 
+import { Fragment } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Check,
-  ChevronsUpDown,
-  FileText,
-  House,
-  ListChecks,
-  Plus,
-  SlidersHorizontal,
-  Trash2,
-} from "lucide-react";
+import { Check, ChevronsUpDown, FileText, House, Plus, SlidersHorizontal, Trash2 } from "lucide-react";
 import { CommandMenuButton } from "./command-menu";
 import { NotificationBell } from "./notification-bell";
+import { MyWorkPanel } from "./my-work-panel";
 import {
   Sidebar,
   SidebarContent,
@@ -51,7 +44,6 @@ export function AppSidebar({ user, workspace, workspaces }: AppSidebarProps) {
 
   const nav = [
     { href: base, label: "Visão geral", icon: House, active: pathname === base },
-    { href: "/my-work", label: "Minhas tarefas", icon: ListChecks, active: pathname === "/my-work" },
     {
       href: `${base}/docs`,
       label: "Documentos",
@@ -113,15 +105,23 @@ export function AppSidebar({ user, workspace, workspaces }: AppSidebarProps) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            {nav.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild isActive={item.active}>
-                  <Link href={item.href} aria-current={item.active ? "page" : undefined}>
-                    <item.icon aria-hidden="true" />
-                    {item.label}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+            {nav.map((item, i) => (
+              <Fragment key={item.href}>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={item.active}>
+                    <Link href={item.href} aria-current={item.active ? "page" : undefined}>
+                      <item.icon aria-hidden="true" />
+                      {item.label}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                {/* logo depois de Visão geral: Minhas tarefas abre por cima da página */}
+                {i === 0 && (
+                  <SidebarMenuItem>
+                    <MyWorkPanel workspaceSlug={workspace.slug} />
+                  </SidebarMenuItem>
+                )}
+              </Fragment>
             ))}
           </SidebarMenu>
         </SidebarGroup>

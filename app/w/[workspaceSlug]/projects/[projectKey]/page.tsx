@@ -75,6 +75,7 @@ async function Board({ params }: { params: Promise<{ workspaceSlug: string; proj
         currentUserId={user.id}
         taskHref={`/w/${workspace.slug}/projects/${project.key}/tasks`}
         now={new Date().toISOString()}
+        canManageColumns={can(workspace.currentUserRole, "project.manage")}
       />
     </div>
   );

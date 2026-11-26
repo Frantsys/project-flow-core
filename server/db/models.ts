@@ -102,6 +102,10 @@ export interface IProjectStatus {
   _id: Types.ObjectId;
   name: string;
   category: StatusCategory;
+  /** Nome de uma cor de lib/status-colors.ts; null = a cor do tipo. */
+  color?: string | null;
+  /** Limite de tarefas na coluna (WIP); null = sem limite. Só avisa, não impede mover. */
+  wipLimit?: number | null;
 }
 
 export const DEFAULT_STATUSES: { name: string; category: StatusCategory }[] = [
@@ -114,6 +118,8 @@ export const DEFAULT_STATUSES: { name: string; category: StatusCategory }[] = [
 const ProjectStatusSchema = new Schema<IProjectStatus>({
   name: { type: String, required: true, trim: true, maxlength: 40 },
   category: { type: String, enum: ["TODO", "IN_PROGRESS", "DONE"], required: true },
+  color: { type: String, default: null },
+  wipLimit: { type: Number, default: null, min: 1, max: 999 },
 });
 
 export interface IProject extends Document {

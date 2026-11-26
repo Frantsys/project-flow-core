@@ -3,10 +3,10 @@ import { projectMetrics } from "@/lib/project-metrics";
 import type { ProjectDetailsDTO, TaskDTO } from "@/server/db/types";
 
 const statuses: ProjectDetailsDTO["statuses"] = [
-  { id: "todo", name: "A Fazer", category: "TODO" },
-  { id: "doing", name: "Fazendo", category: "IN_PROGRESS" },
-  { id: "done", name: "Feito", category: "DONE" },
-  { id: "cancel", name: "Cancelado", category: "DONE" },
+  { id: "todo", name: "A Fazer", category: "TODO", color: null, wipLimit: null },
+  { id: "doing", name: "Fazendo", category: "IN_PROGRESS", color: null, wipLimit: null },
+  { id: "done", name: "Feito", category: "DONE", color: null, wipLimit: null },
+  { id: "cancel", name: "Cancelado", category: "DONE", color: null, wipLimit: null },
 ];
 const sprint = (id: string, status: "PLANNED" | "ACTIVE" | "COMPLETED") => ({
   id,

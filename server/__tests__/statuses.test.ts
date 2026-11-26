@@ -114,3 +114,55 @@ describe("colunas do quadro", () => {
     );
   });
 });
+
+describe("colunas personalizadas", () => {
+  it("guarda cor e limite, e quem não manda esses campos não os apaga", async () => {
+    const { project, ids } = await setup();
+    const base = [
+      { id: ids.todo, name: "A Fazer", category: "TODO" as const },
+      {
+        id: ids.doing,
+        name: "Em Andamento",
+        category: "IN_PROGRESS" as const,
+        color: "violet" as const,
+        wipLimit: 3,
+      },
+      { id: ids.done, name: "Concluído", category: "DONE" as const },
+    ];
+    expectOk(await updateProjectStatusesAction({ projectId: project.id, statuses: base }));
+    // o diálogo de colunas só manda nome e tipo
+    const result = expectOk(
+      await updateProjectStatusesAction({
+        projectId: project.id,
+        statuses: base.map(({ id, name, category }) => ({ id, name, category })),
+      })
+    );
+    expect(result.statuses[1]).toMatchObject({ color: "violet", wipLimit: 3 });
+    expectFail(
+      await updateProjectStatusesAction({
+        projectId: project.id,
+        statuses: base.map((s) => ({ ...s, wipLimit: 0 })),
+      }),
+      "Dados inválidos"
+    );
+  });
+
+  it("excluir coluna manda as tarefas para a coluna escolhida", async () => {
+    const { project, ids } = await setup();
+    const task = expectOk(
+      await createTaskAction({ projectId: project.id, title: "Vai junto", statusId: ids.review })
+    );
+    expectOk(
+      await updateProjectStatusesAction({
+        projectId: project.id,
+        statuses: [
+          { id: ids.todo, name: "A Fazer", category: "TODO" },
+          { id: ids.doing, name: "Em Andamento", category: "IN_PROGRESS" },
+          { id: ids.done, name: "Concluído", category: "DONE" },
+        ],
+        moveTasksTo: { [ids.review]: ids.todo },
+      })
+    );
+    expect((await Task.findById(task.id).lean())!.statusId.toString()).toBe(ids.todo);
+  });
+});

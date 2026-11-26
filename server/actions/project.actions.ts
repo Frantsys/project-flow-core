@@ -7,6 +7,7 @@ import { ChangeHistory, Comment, DocumentModel, Project, Sprint, Task, TrashItem
 import { createAction, fail } from "../lib/action";
 import { requirePermission } from "../lib/access";
 import { recordHistory } from "../services/history.service";
+import { toStatusDTO } from "../services/project.service";
 import {
   createProjectSchema,
   deleteProjectSchema,
@@ -181,17 +182,23 @@ export const deleteProjectAction = createAction({
 export const updateProjectStatusesAction = createAction({
   name: "project.updateStatuses",
   schema: updateProjectStatusesSchema,
-  handler: async ({ projectId, statuses }, { userId }) => {
+  handler: async ({ projectId, statuses, moveTasksTo = {} }, { userId }) => {
     const { project, role } = await loadProjectForManager(projectId, userId);
     const current = (await Project.findById(projectId).select("statuses").lean())?.statuses ?? [];
     const currentIds = new Set(current.map((s) => s._id.toString()));
     if (statuses.some((s) => s.id && !currentIds.has(s.id))) fail("Um dos status não pertence ao projeto.");
 
-    const next = statuses.map((s) => ({
-      _id: s.id ? new Types.ObjectId(s.id) : new Types.ObjectId(),
-      name: s.name,
-      category: s.category,
-    }));
+    const byId = new Map(current.map((s) => [s._id.toString(), s]));
+    const next = statuses.map((s) => {
+      const before = s.id ? byId.get(s.id) : undefined;
+      return {
+        _id: s.id ? new Types.ObjectId(s.id) : new Types.ObjectId(),
+        name: s.name,
+        category: s.category,
+        color: s.color !== undefined ? s.color : (before?.color ?? null),
+        wipLimit: s.wipLimit !== undefined ? s.wipLimit : (before?.wipLimit ?? null),
+      };
+    });
     const kept = new Set(next.map((s) => s._id.toString()));
     const removed = current.filter((s) => !kept.has(s._id.toString()));
 
@@ -201,7 +208,8 @@ export const updateProjectStatusesAction = createAction({
       await session.withTransaction(async () => {
         moved = 0;
         for (const gone of removed) {
-          const target = next.find((s) => s.category === gone.category) ?? next[0]!;
+          const chosen = next.find((s) => s._id.toString() === moveTasksTo[gone._id.toString()]);
+          const target = chosen ?? next.find((s) => s.category === gone.category) ?? next[0]!;
           const result = await Task.updateMany(
             { projectId: project._id, statusId: gone._id },
             { $set: { statusId: target._id } },
@@ -228,7 +236,7 @@ export const updateProjectStatusesAction = createAction({
 
     revalidatePath("/w/[workspaceSlug]/projects/[projectKey]", "layout");
     return {
-      statuses: next.map((s) => ({ id: s._id.toString(), name: s.name, category: s.category })),
+      statuses: next.map(toStatusDTO),
       moved,
     };
   },

@@ -669,3 +669,8 @@ Tudo que o plano previa e ainda não existe, agrupado pelo que destrava cada ite
    aceita os dois provedores). Falta um domínio verificado e `EMAIL_FROM` para e-mail a qualquer pessoa.
 4. ~~Etiquetas, lixeira e atalhos~~ **feito**: etiquetas com cor e filtro; tarefas e documentos
    excluídos vão para a Lixeira por 30 dias, com "Desfazer" no aviso; atalhos C, G + letra e `?`.
+5. ~~Minhas tarefas flutuante e colunas personalizáveis~~ **feito**: o painel abre por cima da tela
+   (barra lateral ou G M); no quadro, criar, renomear, colorir, limitar (WIP), mudar o tipo, mover,
+   recolher e excluir colunas escolhendo para onde vão as tarefas.
+6. **Desenhado, aguardando aprovação** (canvas, seção 8): notificações no mesmo painel flutuante,
+   agrupar o quadro por responsável/prioridade e visões salvas.
