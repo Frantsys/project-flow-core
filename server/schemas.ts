@@ -395,3 +395,13 @@ export const aiSubtasksSchema = taskIdSchema.extend({
 export const trashItemIdSchema = z.object({
   trashId: z.string().regex(objectIdRegex, "Item inválido."),
 });
+
+export const saveViewSchema = z.object({
+  projectId: z.string().regex(objectIdRegex, "ID de projeto inválido."),
+  name: z.string().trim().min(1, "Dê um nome à visão.").max(40, "Use no máximo 40 caracteres."),
+  query: z.string().max(500),
+});
+
+export const viewIdSchema = z.object({
+  viewId: z.string().regex(objectIdRegex, "Visão inválida."),
+});

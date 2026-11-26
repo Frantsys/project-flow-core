@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Plus } from "lucide-react";
 import { getWorkspace, requireUser } from "@/lib/session";
 import { getProjectByKey } from "@/server/services/project.service";
+import { getSavedViews } from "@/server/services/view.service";
 import { can } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -67,7 +68,13 @@ async function Board({ params }: { params: Promise<{ workspaceSlug: string; proj
         }
       />
 
-      <TaskFilterBar members={workspace.members} tags={collectTags(project.tasks)} />
+      <TaskFilterBar
+        members={workspace.members}
+        tags={collectTags(project.tasks)}
+        projectId={project.id}
+        views={await getSavedViews(project.id, user.id)}
+        grouping
+      />
       <KanbanBoard
         projectId={project.id}
         statuses={project.statuses}

@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { ChevronDown, Plus } from "lucide-react";
 import { getWorkspace, requireUser } from "@/lib/session";
 import { getProjectByKey } from "@/server/services/project.service";
+import { getSavedViews } from "@/server/services/view.service";
 import { fullDate, pointsLabel, priorityBadge, sprintBadge } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -138,7 +139,12 @@ async function Backlog({
         }
       />
 
-      <TaskFilterBar members={workspace.members} tags={collectTags(project.tasks)} />
+      <TaskFilterBar
+        members={workspace.members}
+        tags={collectTags(project.tasks)}
+        projectId={project.id}
+        views={await getSavedViews(project.id, user.id)}
+      />
 
       {open.map(section)}
       {section(null)}

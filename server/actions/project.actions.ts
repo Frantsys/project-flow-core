@@ -3,7 +3,16 @@
 import { revalidatePath } from "next/cache";
 import mongoose, { Types } from "mongoose";
 import dbConnect from "@/lib/db";
-import { ChangeHistory, Comment, DocumentModel, Project, Sprint, Task, TrashItem } from "../db/models";
+import {
+  ChangeHistory,
+  Comment,
+  DocumentModel,
+  Project,
+  SavedView,
+  Sprint,
+  Task,
+  TrashItem,
+} from "../db/models";
 import { createAction, fail } from "../lib/action";
 import { requirePermission } from "../lib/access";
 import { recordHistory } from "../services/history.service";
@@ -148,6 +157,7 @@ export const deleteProjectAction = createAction({
         await Sprint.deleteMany({ projectId }, { session });
         await DocumentModel.deleteMany({ projectId }, { session });
         await TrashItem.deleteMany({ projectId }, { session });
+        await SavedView.deleteMany({ projectId }, { session });
         await ChangeHistory.deleteMany(
           { $or: [{ parentId: project._id }, { targetId: { $in: relatedIds } }] },
           { session }

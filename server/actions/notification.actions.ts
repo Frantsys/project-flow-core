@@ -5,13 +5,20 @@ import { z } from "zod";
 import dbConnect from "@/lib/db";
 import { Notification } from "../db/models";
 import { createAction } from "../lib/action";
-import { countUnread } from "../services/notification.service";
+import { countUnread, getNotifications } from "../services/notification.service";
 
 /** Contador do sino; o cliente consulta ao abrir a aba e de tempos em tempos. */
 export const getUnreadCountAction = createAction({
   name: "notification.unreadCount",
   schema: z.object({}),
   handler: async (_input, { userId }) => countUnread(userId),
+});
+
+/** As notificações mais recentes, para o painel do sino. */
+export const getRecentNotificationsAction = createAction({
+  name: "notification.recent",
+  schema: z.object({}),
+  handler: async (_input, { userId }) => getNotifications(userId, 20),
 });
 
 /** Marca como lidas as notificações dadas, ou todas se `ids` vier vazio. Só as da própria pessoa. */

@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import mongoose, { Types } from "mongoose";
 import { revalidatePath } from "next/cache";
 import dbConnect from "@/lib/db";
-import { AuthToken, Task, User, Workspace } from "../db/models";
+import { AuthToken, SavedView, Task, User, Workspace } from "../db/models";
 import { createAction, fail } from "../lib/action";
 import { enforceRateLimit } from "../lib/rate-limit";
 import { accountsCollection } from "../services/account.service";
@@ -95,6 +95,7 @@ export const deleteAccountAction = createAction({
         );
         await Task.updateMany({ assigneeId: id }, { $set: { assigneeId: null } }, { session });
         await AuthToken.deleteMany({ userId: id }, { session });
+        await SavedView.deleteMany({ userId: id }, { session });
         await accountsCollection().deleteMany({ userId: id }, { session });
         await User.deleteOne({ _id: id }, { session });
       });

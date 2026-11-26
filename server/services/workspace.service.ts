@@ -10,6 +10,7 @@ import {
   Sprint,
   Task,
   TrashItem,
+  SavedView,
   Workspace,
   WorkspaceRole,
 } from "../db/models";
@@ -252,6 +253,7 @@ export async function deleteWorkspace(
       await Sprint.deleteMany({ projectId: { $in: projectIds } }, { session });
       await DocumentModel.deleteMany({ workspaceId }, { session });
       await TrashItem.deleteMany({ workspaceId }, { session });
+      await SavedView.deleteMany({ projectId: { $in: projectIds } }, { session });
       await ChangeHistory.deleteMany({ workspaceId }, { session });
       await Project.deleteMany({ workspaceId }, { session });
       await Workspace.deleteOne({ _id: workspaceId }, { session });

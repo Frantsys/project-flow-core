@@ -672,5 +672,6 @@ Tudo que o plano previa e ainda não existe, agrupado pelo que destrava cada ite
 5. ~~Minhas tarefas flutuante e colunas personalizáveis~~ **feito**: o painel abre por cima da tela
    (barra lateral ou G M); no quadro, criar, renomear, colorir, limitar (WIP), mudar o tipo, mover,
    recolher e excluir colunas escolhendo para onde vão as tarefas.
-6. **Desenhado, aguardando aprovação** (canvas, seção 8): notificações no mesmo painel flutuante,
-   agrupar o quadro por responsável/prioridade e visões salvas.
+6. ~~Notificações em painel, faixas no quadro e visões salvas~~ **feito**: o sino abre um painel
+   (Todas, Menções, Atribuídas); o quadro agrupa por responsável, prioridade, tipo ou etiqueta, e
+   soltar em outra faixa troca o campo; visões salvas guardam filtros e agrupamento por pessoa.

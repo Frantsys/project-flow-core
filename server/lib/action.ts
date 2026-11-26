@@ -30,7 +30,7 @@ export async function getSessionUser(): Promise<{ id: string; demo: boolean } | 
 }
 
 // leituras que a demonstração pode fazer; todo o resto altera dados e fica bloqueado
-const DEMO_ALLOWED = new Set(["search", "notification.unreadCount", "myWork.list"]);
+const DEMO_ALLOWED = new Set(["search", "notification.unreadCount", "notification.recent", "myWork.list"]);
 const DEMO_READ_ONLY = "Esta é uma demonstração só para leitura. Crie uma conta grátis para editar.";
 
 interface ActionContext {

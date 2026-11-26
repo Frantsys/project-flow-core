@@ -569,3 +569,29 @@ TrashItemSchema.index({ createdAt: 1 }, { expireAfterSeconds: TRASH_DAYS * 24 * 
 
 export const TrashItem: Model<ITrashItem> =
   mongoose.models.TrashItem || mongoose.model<ITrashItem>("TrashItem", TrashItemSchema);
+
+/** Visão salva: um conjunto de filtros do projeto com nome, de uma pessoa ("Bugs urgentes"). */
+export interface ISavedView {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
+  projectId: Types.ObjectId;
+  name: string;
+  /** Query string normalizada (lib/saved-views.ts), ex.: "priority=URGENT&type=BUG". */
+  query: string;
+  createdAt: Date;
+}
+
+const SavedViewSchema = new Schema<ISavedView>(
+  {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    projectId: { type: Schema.Types.ObjectId, ref: "Project", required: true },
+    name: { type: String, required: true, trim: true, maxlength: 40 },
+    query: { type: String, required: true, maxlength: 500 },
+  },
+  { timestamps: { createdAt: true, updatedAt: false }, versionKey: false }
+);
+
+SavedViewSchema.index({ userId: 1, projectId: 1, createdAt: 1 });
+
+export const SavedView: Model<ISavedView> =
+  mongoose.models.SavedView || mongoose.model<ISavedView>("SavedView", SavedViewSchema);

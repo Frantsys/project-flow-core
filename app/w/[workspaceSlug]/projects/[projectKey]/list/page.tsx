@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { getWorkspace, requireUser } from "@/lib/session";
 import { getProjectByKey } from "@/server/services/project.service";
+import { getSavedViews } from "@/server/services/view.service";
 import { collectTags, filterTasks, parseTaskFilters } from "@/lib/task-filters";
 import { fullDate, priorityBadge, todayInBrazil } from "@/lib/labels";
 import type { TaskDTO } from "@/server/db/types";
@@ -109,7 +110,12 @@ async function TaskList({
   return (
     <div className="flex min-w-0 flex-col gap-5 p-6 md:p-8">
       <ProjectHeader workspace={workspace} project={project} view="list" />
-      <TaskFilterBar members={workspace.members} tags={collectTags(project.tasks)} />
+      <TaskFilterBar
+        members={workspace.members}
+        tags={collectTags(project.tasks)}
+        projectId={project.id}
+        views={await getSavedViews(project.id, user.id)}
+      />
       <Card className="gap-0 overflow-hidden py-0">
         <div className="overflow-x-auto">
           <Table>
