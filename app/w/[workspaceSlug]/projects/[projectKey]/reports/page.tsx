@@ -1,19 +1,17 @@
 import { Suspense } from "react";
 import { Reveal } from "@/components/reveal";
 import { notFound } from "next/navigation";
-import { getWorkspace, requireUser } from "@/lib/session";
-import { getProjectByKey } from "@/server/services/project.service";
+import { getProject, getWorkspace, requireUser } from "@/lib/session";
 import { projectMetrics } from "@/lib/project-metrics";
 import { fullDate, todayInBrazil } from "@/lib/labels";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ProjectHeader } from "@/components/projects/project-header";
 import { BarList, ChartCard, ColumnChart, Meter, StatTile } from "@/components/reports/charts";
 
 export default function ReportsPage({
   params,
 }: PageProps<"/w/[workspaceSlug]/projects/[projectKey]/reports">) {
   return (
-    <Suspense fallback={<Skeleton className="m-8 h-[560px] rounded-xl" />}>
+    <Suspense fallback={<Skeleton className="mx-6 mt-5 h-[560px] rounded-xl md:mx-8" />}>
       <Reveal>
         <Reports params={params} />
       </Reveal>
@@ -26,7 +24,7 @@ async function Reports({ params }: { params: Promise<{ workspaceSlug: string; pr
   const user = await requireUser();
   const [workspace, project] = await Promise.all([
     getWorkspace(workspaceSlug, user.id),
-    getProjectByKey(workspaceSlug, projectKey, user.id),
+    getProject(workspaceSlug, projectKey, user.id),
   ]);
   if (!workspace || !project) notFound();
 
@@ -34,9 +32,7 @@ async function Reports({ params }: { params: Promise<{ workspaceSlug: string; pr
   const tasks: [string, string] = ["tarefa", "tarefas"];
 
   return (
-    <div className="flex min-w-0 flex-col gap-5 p-6 md:p-8">
-      <ProjectHeader workspace={workspace} project={project} view="reports" />
-
+    <div className="flex min-w-0 flex-col gap-5 px-6 pt-5 pb-6 md:px-8 md:pb-8">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile label="Tarefas abertas" value={m.open} hint={`de ${m.total} no projeto`} />
         <StatTile

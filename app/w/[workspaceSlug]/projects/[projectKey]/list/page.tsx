@@ -4,8 +4,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowDown, ArrowUp } from "lucide-react";
-import { getWorkspace, requireUser } from "@/lib/session";
-import { getProjectByKey } from "@/server/services/project.service";
+import { getProject, getWorkspace, requireUser } from "@/lib/session";
 import { getSavedViews } from "@/server/services/view.service";
 import { collectTags, filterTasks, parseTaskFilters } from "@/lib/task-filters";
 import { fullDate, priorityBadge, todayInBrazil } from "@/lib/labels";
@@ -14,7 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ProjectHeader } from "@/components/projects/project-header";
 import { TaskFilterBar } from "@/components/projects/task-filter-bar";
 import { TaskTypeIndicator } from "@/components/projects/task-type";
 import { UserAvatar } from "@/components/user-avatar";
@@ -27,7 +25,7 @@ export default function ListPage({
   searchParams,
 }: PageProps<"/w/[workspaceSlug]/projects/[projectKey]/list">) {
   return (
-    <Suspense fallback={<Skeleton className="m-8 h-96 rounded-xl" />}>
+    <Suspense fallback={<Skeleton className="mx-6 mt-5 h-96 rounded-xl md:mx-8" />}>
       <Reveal>
         <TaskList params={params} searchParams={searchParams} />
       </Reveal>
@@ -58,7 +56,7 @@ async function TaskList({
   const user = await requireUser();
   const [workspace, project] = await Promise.all([
     getWorkspace(workspaceSlug, user.id),
-    getProjectByKey(workspaceSlug, projectKey, user.id),
+    getProject(workspaceSlug, projectKey, user.id),
   ]);
   if (!workspace || !project) notFound();
 
@@ -111,8 +109,7 @@ async function TaskList({
   };
 
   return (
-    <div className="flex min-w-0 flex-col gap-5 p-6 md:p-8">
-      <ProjectHeader workspace={workspace} project={project} view="list" />
+    <div className="flex min-w-0 flex-col gap-5 px-6 pt-5 pb-6 md:px-8 md:pb-8">
       <TaskFilterBar
         members={workspace.members}
         tags={collectTags(project.tasks)}

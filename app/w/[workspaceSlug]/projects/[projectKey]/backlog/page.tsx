@@ -5,9 +5,8 @@ import { TaskFilterBar } from "@/components/projects/task-filter-bar";
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronDown, Plus } from "lucide-react";
-import { getWorkspace, requireUser } from "@/lib/session";
-import { getProjectByKey } from "@/server/services/project.service";
+import { ChevronDown } from "lucide-react";
+import { getProject, getWorkspace, requireUser } from "@/lib/session";
 import { getSavedViews } from "@/server/services/view.service";
 import { fullDate, pointsLabel, priorityBadge, sprintBadge } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
@@ -16,12 +15,9 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ProjectHeader } from "@/components/projects/project-header";
 import { TaskTypeIndicator } from "@/components/projects/task-type";
-import { CreateTaskDialog } from "@/components/projects/create-task-dialog";
 import { CreateSprintDialog } from "@/components/sprints/create-sprint-dialog";
 import { SprintActions } from "@/components/sprints/sprint-actions";
-import { ProjectMenu } from "@/components/projects/project-menu";
 import { UserAvatar } from "@/components/user-avatar";
 import type { ProjectSprintSummaryDTO, TaskDTO } from "@/server/db/types";
 
@@ -55,7 +51,7 @@ async function Backlog({
   const user = await requireUser();
   const [workspace, project] = await Promise.all([
     getWorkspace(workspaceSlug, user.id),
-    getProjectByKey(workspaceSlug, projectKey, user.id),
+    getProject(workspaceSlug, projectKey, user.id),
   ]);
 
   if (!workspace || !project) notFound();
@@ -100,48 +96,7 @@ async function Backlog({
   };
 
   return (
-    <div className="flex min-w-0 flex-col gap-5 p-6 md:p-8">
-      <ProjectHeader
-        workspace={workspace}
-        project={project}
-        view="backlog"
-        actions={
-          <div className="flex flex-wrap gap-2">
-            {can(workspace.currentUserRole, "project.manage") && (
-              <ProjectMenu
-                project={{
-                  id: project.id,
-                  name: project.name,
-                  key: project.key,
-                  description: project.description,
-                  taskCount: project.tasks.length,
-                }}
-                statuses={project.statuses}
-                taskStatusIds={project.tasks.map((t) => t.statusId)}
-                workspaceSlug={workspace.slug}
-              />
-            )}
-            {canPlan && (
-              <CreateSprintDialog
-                projectId={project.id}
-                suggestedName={`Sprint ${project.sprints.length + 1}`}
-                trigger={<Button variant="outline">Nova sprint</Button>}
-              />
-            )}
-            <CreateTaskDialog
-              projectId={project.id}
-              statuses={project.statuses}
-              trigger={
-                <Button data-shortcut="c" aria-keyshortcuts="C" title="Nova tarefa (C)">
-                  <Plus aria-hidden="true" />
-                  Nova tarefa
-                </Button>
-              }
-            />
-          </div>
-        }
-      />
-
+    <div className="flex min-w-0 flex-col gap-5 px-6 pt-5 pb-6 md:px-8 md:pb-8">
       <TaskFilterBar
         members={workspace.members}
         tags={collectTags(project.tasks)}
@@ -149,6 +104,15 @@ async function Backlog({
         views={await getSavedViews(project.id, user.id)}
       />
 
+      {canPlan && (
+        <div className="flex justify-end">
+          <CreateSprintDialog
+            projectId={project.id}
+            suggestedName={`Sprint ${project.sprints.length + 1}`}
+            trigger={<Button variant="outline">Nova sprint</Button>}
+          />
+        </div>
+      )}
       {open.map(section)}
       {section(null)}
 
@@ -274,9 +238,12 @@ function SprintSection({
 
 function BacklogSkeleton() {
   return (
-    <div className="flex flex-col gap-5 p-6 md:p-8" aria-busy="true" aria-label="Carregando backlog">
-      <Skeleton className="h-14 w-72" />
-      <Skeleton className="h-9 w-48" />
+    <div
+      className="flex flex-col gap-5 px-6 pt-5 pb-6 md:px-8"
+      aria-busy="true"
+      aria-label="Carregando backlog"
+    >
+      <Skeleton className="h-9 w-full max-w-3xl" />
       {[0, 1].map((i) => (
         <Skeleton key={i} className="h-44 rounded-xl" />
       ))}

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "./auth";
 import { getWorkspaceBySlug } from "@/server/services/workspace.service";
 import { getWorkspaceDocuments } from "@/server/services/document.service";
+import { getProjectByKey } from "@/server/services/project.service";
 
 export interface CurrentUser {
   id: string;
@@ -38,3 +39,6 @@ export const getWorkspace = cache(getWorkspaceBySlug);
 
 // Árvore de documentos: usada pelo layout (navegação) e pela página (trilha) na mesma requisição
 export const getDocuments = cache(getWorkspaceDocuments);
+
+// Projeto lido pelo layout (cabeçalho) e pela página (conteúdo) na mesma requisição
+export const getProject = cache(getProjectByKey);

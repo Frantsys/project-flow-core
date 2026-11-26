@@ -51,8 +51,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <TooltipProvider>
-            {/* troca de tela pelos links de navegação (tipo "nav"): ver globals.css, "Movimento" */}
-            <ViewTransition default={{ nav: "page", default: "none" }}>{children}</ViewTransition>
+            {/* troca de tela (tipo "nav") e de visão do projeto (tab-forward/back): globals.css, "Movimento" */}
+            <ViewTransition
+              default={{
+                "tab-forward": "tab-forward",
+                "tab-back": "tab-back",
+                nav: "page",
+                default: "none",
+              }}
+            >
+              {children}
+            </ViewTransition>
           </TooltipProvider>
           {/* lê a rota atual (usePathname): fica fora do HTML pré-renderizado */}
           <Suspense fallback={null}>

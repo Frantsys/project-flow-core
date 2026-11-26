@@ -1,16 +1,10 @@
 import { Suspense } from "react";
 import { Reveal } from "@/components/reveal";
 import { notFound } from "next/navigation";
-import { Plus } from "lucide-react";
-import { getWorkspace, requireUser } from "@/lib/session";
-import { getProjectByKey } from "@/server/services/project.service";
+import { getProject, getWorkspace, requireUser } from "@/lib/session";
 import { getSavedViews } from "@/server/services/view.service";
 import { can } from "@/lib/permissions";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ProjectHeader } from "@/components/projects/project-header";
-import { CreateTaskDialog } from "@/components/projects/create-task-dialog";
-import { ProjectMenu } from "@/components/projects/project-menu";
 import { Board as KanbanBoard } from "@/components/projects/board";
 import { TaskFilterBar } from "@/components/projects/task-filter-bar";
 import { collectTags } from "@/lib/task-filters";
@@ -30,47 +24,13 @@ async function Board({ params }: { params: Promise<{ workspaceSlug: string; proj
   const user = await requireUser();
   const [workspace, project] = await Promise.all([
     getWorkspace(workspaceSlug, user.id),
-    getProjectByKey(workspaceSlug, projectKey, user.id),
+    getProject(workspaceSlug, projectKey, user.id),
   ]);
 
   if (!workspace || !project) notFound();
 
   return (
-    <div className="flex min-w-0 flex-col gap-5 p-6 md:p-8">
-      <ProjectHeader
-        workspace={workspace}
-        project={project}
-        view="board"
-        actions={
-          <div className="flex flex-wrap gap-2">
-            {can(workspace.currentUserRole, "project.manage") && (
-              <ProjectMenu
-                project={{
-                  id: project.id,
-                  name: project.name,
-                  key: project.key,
-                  description: project.description,
-                  taskCount: project.tasks.length,
-                }}
-                statuses={project.statuses}
-                taskStatusIds={project.tasks.map((t) => t.statusId)}
-                workspaceSlug={workspace.slug}
-              />
-            )}
-            <CreateTaskDialog
-              projectId={project.id}
-              statuses={project.statuses}
-              trigger={
-                <Button data-shortcut="c" aria-keyshortcuts="C" title="Nova tarefa (C)">
-                  <Plus aria-hidden="true" />
-                  Nova tarefa
-                </Button>
-              }
-            />
-          </div>
-        }
-      />
-
+    <div className="flex min-w-0 flex-col gap-5 px-6 pt-5 pb-6 md:px-8 md:pb-8">
       <TaskFilterBar
         members={workspace.members}
         tags={collectTags(project.tasks)}
@@ -93,9 +53,12 @@ async function Board({ params }: { params: Promise<{ workspaceSlug: string; proj
 
 function BoardSkeleton() {
   return (
-    <div className="flex flex-col gap-5 p-6 md:p-8" aria-busy="true" aria-label="Carregando quadro">
-      <Skeleton className="h-14 w-72" />
-      <Skeleton className="h-9 w-48" />
+    <div
+      className="flex flex-col gap-5 px-6 pt-5 pb-6 md:px-8"
+      aria-busy="true"
+      aria-label="Carregando quadro"
+    >
+      <Skeleton className="h-9 w-full max-w-3xl" />
       <div className="flex gap-3.5">
         {[0, 1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-80 w-[260px] shrink-0 rounded-xl" />

@@ -233,6 +233,42 @@
     var(--motion-enter) var(--ease-out) var(--motion-exit) both pf-fade,
     var(--motion-move) var(--ease-out) both pf-rise;
 }
+/* visões do projeto (Quadro → Backlog…): o conteúdo vai para o lado da aba escolhida. A
+   distância é curta (16 px): diz a direção sem fazer o olho perseguir a tela */
+@keyframes pf-slide {
+  from {
+    translate: var(--slide-from) 0;
+  }
+}
+@keyframes pf-slide-out {
+  to {
+    translate: var(--slide-to) 0;
+  }
+}
+::view-transition-old(.tab-forward),
+::view-transition-old(.tab-back) {
+  animation:
+    var(--motion-exit) ease-in both pf-fade reverse,
+    var(--motion-exit) ease-in both pf-slide-out;
+}
+::view-transition-new(.tab-forward),
+::view-transition-new(.tab-back) {
+  animation:
+    var(--motion-enter) var(--ease-out) 60ms both pf-fade,
+    var(--motion-move) var(--ease-out) both pf-slide;
+}
+::view-transition-old(.tab-forward) {
+  --slide-to: -16px;
+}
+::view-transition-new(.tab-forward) {
+  --slide-from: 16px;
+}
+::view-transition-old(.tab-back) {
+  --slide-to: 16px;
+}
+::view-transition-new(.tab-back) {
+  --slide-from: -16px;
+}
 ::view-transition-old(.reveal) {
   animation: var(--motion-exit) ease-in both pf-fade reverse;
 }
@@ -246,7 +282,8 @@
 /* o fundo ativo da barra passa por cima da barra (âncora opaca); a mistura deixa o texto que
    está embaixo à vista: multiply no claro (fundo mais escuro que a barra), lighten no escuro */
 ::view-transition-group(nav-active),
-::view-transition-group(header-active) {
+::view-transition-group(header-active),
+::view-transition-group(tab-active) {
   z-index: 60;
 }
 ::view-transition-group(nav-active) {
@@ -258,19 +295,45 @@
 /* âncoras: não se mexem durante a troca de tela */
 ::view-transition-group(app-sidebar),
 ::view-transition-group(app-header),
+::view-transition-group(project-header),
+::view-transition-group(tab-labels),
 ::view-transition-group(buddy) {
   animation: none;
   z-index: 50;
 }
+/* rótulos das abas acima do fundo que desliza (depois das âncoras, para valer o z-index) */
+::view-transition-group(tab-labels) {
+  z-index: 70;
+}
 ::view-transition-old(app-sidebar),
 ::view-transition-old(app-header),
+::view-transition-old(project-header),
+::view-transition-old(tab-labels),
 ::view-transition-old(buddy) {
   display: none;
 }
 ::view-transition-new(app-sidebar),
 ::view-transition-new(app-header),
+::view-transition-new(project-header),
+::view-transition-new(tab-labels),
 ::view-transition-new(buddy) {
   animation: none;
+}
+
+/* âncora que só existe de um lado (entrando ou saindo de um projeto, de um workspace…): anima
+   como a página, em vez de sumir ou aparecer de uma vez */
+::view-transition-old(app-sidebar):only-child,
+::view-transition-old(app-header):only-child,
+::view-transition-old(project-header):only-child {
+  display: block;
+  animation: var(--motion-exit) ease-in both pf-fade reverse;
+}
+::view-transition-new(app-sidebar):only-child,
+::view-transition-new(app-header):only-child,
+::view-transition-new(project-header):only-child {
+  animation:
+    var(--motion-enter) var(--ease-out) var(--motion-exit) both pf-fade,
+    var(--motion-move) var(--ease-out) both pf-rise;
 }
 
 @media (prefers-reduced-motion: reduce) {
