@@ -35,8 +35,9 @@ workspace de exemplo sem cadastro (só leitura).
   com códigos de recuperação; segredo criptografado no banco e cada código vale uma vez.
 - **Sessões:** trocar ou redefinir a senha e ligar o 2FA encerram todas as sessões abertas; "Sair de
   todos os dispositivos" em Minha conta.
-- **IA na tarefa** (opcional, com `ANTHROPIC_API_KEY`): resumo da tarefa e sugestão de subtarefas
-  com o Claude Haiku 5.5, limitado a 50 usos por workspace por dia.
+- **IA na tarefa** (opcional): resumo da tarefa e sugestão de subtarefas com o Claude Haiku 5.5
+  (`ANTHROPIC_API_KEY`) ou o Gemini 3.5 Flash-Lite (`GEMINI_API_KEY`), limitado a 50 usos por
+  workspace por dia.
 - **API pública v1** só leitura, com tokens por workspace e especificação OpenAPI em
   `/api/v1/openapi.json` ([ADR 010](docs/adrs/010-api-publica-v1.md)).
 - **Página inicial pública**, termos de uso, política de privacidade (LGPD), imagem de compartilhamento,

@@ -5,13 +5,16 @@ import { z } from "zod";
 import { fail } from "./action";
 
 /**
- * Recursos de IA da tarefa (resumo e sugestão de subtarefas) com o Claude.
- * Claude Haiku 5.5: rápido e barato, suficiente para resumir e listar passos (roadmap, Fase 8).
- * Só liga com ANTHROPIC_API_KEY; sem ela a interface esconde os botões e as actions recusam.
+ * Recursos de IA da tarefa (resumo e sugestão de subtarefas).
+ * Usa o Claude Haiku 5.5 com ANTHROPIC_API_KEY; sem ela, o Gemini 3.5 Flash-Lite com GEMINI_API_KEY.
+ * Os dois são rápidos e baratos, suficientes para resumir e listar passos (roadmap, Fase 8).
+ * Sem nenhuma chave a interface esconde os botões e as actions recusam.
  */
 export const AI_MODEL = "claude-haiku-5-5";
+export const GEMINI_MODEL = "gemini-3.5-flash-lite";
 
-export const aiEnabled = () => !!process.env.ANTHROPIC_API_KEY;
+const viaGemini = () => !process.env.ANTHROPIC_API_KEY && !!process.env.GEMINI_API_KEY;
+export const aiEnabled = () => !!process.env.ANTHROPIC_API_KEY || viaGemini();
 
 let client: Anthropic | null = null;
 const getClient = () => (client ??= new Anthropic());
@@ -62,7 +65,67 @@ async function call<T>(name: string, run: (anthropic: Anthropic) => Promise<T>):
   }
 }
 
+/**
+ * Gemini pela API REST (sem SDK). Devolve o texto da resposta; com `schema`, pede JSON nesse formato.
+ * O conteúdo da tarefa vai como dado do usuário, igual ao Claude.
+ */
+/** JSON Schema puro para o Gemini, sem o "$schema" que o zod acrescenta. */
+function jsonSchema(schema: z.ZodType) {
+  const { $schema: _ignored, ...rest } = z.toJSONSchema(schema);
+  return rest;
+}
+
+async function gemini(name: string, prompt: string, schema?: z.ZodType) {
+  if (!aiEnabled()) fail("A IA não está configurada neste ambiente.");
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM }] },
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          // o limite conta também o raciocínio, que fica no mínimo
+          maxOutputTokens: 2048,
+          thinkingConfig: { thinkingLevel: "minimal" },
+          ...(schema && { responseMimeType: "application/json", responseJsonSchema: jsonSchema(schema) }),
+        },
+      }),
+      signal: AbortSignal.timeout(30_000),
+    }
+  ).catch(() => fail("A IA não respondeu. Tente de novo em instantes."));
+
+  if (res.status === 429) fail("A IA está ocupada agora. Tente de novo em instantes.");
+  if (!res.ok) {
+    console.error(`[ai:${name}] gemini ${res.status}`, (await res.text()).slice(0, 500));
+    fail("A IA não respondeu. Tente de novo em instantes.");
+  }
+  const data = (await res.json()) as {
+    candidates?: { finishReason?: string; content?: { parts?: { text?: string; thought?: boolean }[] } }[];
+  };
+  const candidate = data.candidates?.[0];
+  // bloqueio de segurança vem sem candidato ou com finishReason diferente de STOP/MAX_TOKENS
+  if (!candidate || !["STOP", "MAX_TOKENS"].includes(candidate.finishReason ?? "")) return null;
+  return (candidate.content?.parts ?? [])
+    .filter((p) => !p.thought && p.text)
+    .map((p) => p.text)
+    .join("")
+    .trim();
+}
+
+const SUMMARY_PROMPT =
+  "Resuma a situação desta tarefa em até 4 frases curtas: o que é, o que já foi decidido ou feito e o que falta. Sem títulos e sem listas.";
+const SUBTASKS_PROMPT =
+  "Sugira de 3 a 7 subtarefas para concluir esta tarefa, sem repetir as que já existem. Cada uma com no máximo 80 caracteres.";
+
 export async function summarizeTask(task: TaskContext) {
+  if (viaGemini()) {
+    const text = await gemini("summary", `${describeTask(task)}\n\n${SUMMARY_PROMPT}`);
+    if (text === null) fail("A IA não conseguiu resumir esta tarefa.");
+    if (!text) fail("A IA não devolveu um resumo. Tente de novo.");
+    return text;
+  }
   const response = await call("summary", (anthropic) =>
     anthropic.messages.create({
       model: AI_MODEL,
@@ -73,7 +136,7 @@ export async function summarizeTask(task: TaskContext) {
       messages: [
         {
           role: "user",
-          content: `${describeTask(task)}\n\nResuma a situação desta tarefa em até 4 frases curtas: o que é, o que já foi decidido ou feito e o que falta. Sem títulos e sem listas.`,
+          content: `${describeTask(task)}\n\n${SUMMARY_PROMPT}`,
         },
       ],
     })
@@ -92,6 +155,27 @@ const SuggestionSchema = z.object({
 });
 
 export async function suggestSubtasks(task: TaskContext) {
+  const suggestions = viaGemini() ? await suggestWithGemini(task) : await suggestWithClaude(task);
+  const existing = new Set(task.subtasks.map((s) => s.title.toLocaleLowerCase("pt-BR")));
+  // o schema não limita tamanho nem quantidade: o servidor corta aqui
+  return suggestions
+    .map((s) => s.trim().slice(0, 200))
+    .filter((s) => s && !existing.has(s.toLocaleLowerCase("pt-BR")))
+    .slice(0, 7);
+}
+
+async function suggestWithGemini(task: TaskContext) {
+  const text = await gemini("subtasks", `${describeTask(task)}\n\n${SUBTASKS_PROMPT}`, SuggestionSchema);
+  let parsed: z.infer<typeof SuggestionSchema> | undefined;
+  try {
+    parsed = SuggestionSchema.parse(JSON.parse(text ?? ""));
+  } catch {
+    fail("A IA não conseguiu sugerir subtarefas para esta tarefa.");
+  }
+  return parsed.subtasks;
+}
+
+async function suggestWithClaude(task: TaskContext) {
   const response = await call("subtasks", (anthropic) =>
     anthropic.messages.parse({
       model: AI_MODEL,
@@ -101,7 +185,7 @@ export async function suggestSubtasks(task: TaskContext) {
       messages: [
         {
           role: "user",
-          content: `${describeTask(task)}\n\nSugira de 3 a 7 subtarefas para concluir esta tarefa, sem repetir as que já existem. Cada uma com no máximo 80 caracteres.`,
+          content: `${describeTask(task)}\n\n${SUBTASKS_PROMPT}`,
         },
       ],
     })
@@ -109,10 +193,5 @@ export async function suggestSubtasks(task: TaskContext) {
   if (response.stop_reason === "refusal" || !response.parsed_output) {
     fail("A IA não conseguiu sugerir subtarefas para esta tarefa.");
   }
-  const existing = new Set(task.subtasks.map((s) => s.title.toLocaleLowerCase("pt-BR")));
-  // o schema não limita tamanho nem quantidade: o servidor corta aqui
-  return response.parsed_output.subtasks
-    .map((s) => s.trim().slice(0, 200))
-    .filter((s) => s && !existing.has(s.toLocaleLowerCase("pt-BR")))
-    .slice(0, 7);
+  return response.parsed_output.subtasks;
 }

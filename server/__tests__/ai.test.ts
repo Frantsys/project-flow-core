@@ -106,3 +106,59 @@ describe("IA na tarefa", () => {
     expect(create).not.toHaveBeenCalled();
   });
 });
+
+describe("IA na tarefa com o Gemini", () => {
+  const fetchMock = vi.fn();
+  const reply = (body: unknown, status = 200) =>
+    fetchMock.mockResolvedValue(new Response(JSON.stringify(body), { status }));
+  const text = (t: string, finishReason = "STOP") => ({
+    candidates: [{ finishReason, content: { parts: [{ text: "pensando", thought: true }, { text: t }] } }],
+  });
+
+  beforeEach(() => {
+    process.env.GEMINI_API_KEY = "gemini-test-key";
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+  afterEach(() => {
+    delete process.env.GEMINI_API_KEY;
+    vi.unstubAllGlobals();
+  });
+
+  it("sem a chave da Anthropic, resume com o Gemini", async () => {
+    const { task } = await setup();
+    reply(text("Falta só o Safari."));
+    const { summary } = expectOk(await summarizeTaskAction({ taskId: task.id }));
+    expect(summary).toBe("Falta só o Safari.");
+    expect(create).not.toHaveBeenCalled();
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toContain("gemini-3.5-flash-lite:generateContent");
+    expect(init.headers["x-goog-api-key"]).toBe("gemini-test-key");
+    expect(JSON.parse(init.body).contents[0].parts[0].text).toMatch(/<tarefa>[\s\S]*Migrar o login/);
+  });
+
+  it("sugere subtarefas pelo JSON estruturado, sem repetir", async () => {
+    const { task } = await setup();
+    expectOk(await addSubtaskAction({ taskId: task.id, title: "Escrever testes" }));
+    reply(text(JSON.stringify({ subtasks: ["Escrever testes", "Mapear telas"] })));
+    const { subtasks } = expectOk(await suggestSubtasksAction({ taskId: task.id }));
+    expect(subtasks).toEqual(["Mapear telas"]);
+    const schema = JSON.parse(fetchMock.mock.calls[0]![1].body).generationConfig.responseJsonSchema;
+    expect(schema.properties.subtasks.type).toBe("array");
+    expect(schema.$schema).toBeUndefined();
+  });
+
+  it("bloqueio, limite e erro do Gemini viram mensagem", async () => {
+    const { task } = await setup();
+    reply(text("", "SAFETY"));
+    expectFail(await summarizeTaskAction({ taskId: task.id }), "não conseguiu resumir");
+    reply({ error: { code: 429 } }, 429);
+    expectFail(await summarizeTaskAction({ taskId: task.id }), "ocupada");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    reply({ error: { code: 500 } }, 500);
+    expectFail(await suggestSubtasksAction({ taskId: task.id }), "não respondeu");
+    reply(text("isto não é JSON"));
+    expectFail(await suggestSubtasksAction({ taskId: task.id }), "não conseguiu sugerir");
+  });
+});

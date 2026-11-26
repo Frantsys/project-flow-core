@@ -609,7 +609,7 @@ Tudo que o plano previa e ainda não existe, agrupado pelo que destrava cada ite
 | Item                         | O que falta                                                                                     | Etapa         |
 | ---------------------------- | ----------------------------------------------------------------------------------------------- | ------------- |
 | E-mails de verdade           | `RESEND_API_KEY` na Vercel; para enviar a qualquer pessoa, um domínio verificado e `EMAIL_FROM` | 1.3, 3.6, 5.2 |
-| IA na tarefa                 | `ANTHROPIC_API_KEY` na Vercel (o código já está em produção, escondido)                         | 8.1, 8.2      |
+| IA na tarefa                 | ~~`ANTHROPIC_API_KEY` ou `GEMINI_API_KEY` na Vercel~~ **feito** com o Gemini                    | 8.1, 8.2      |
 | Deploy de preview por PR     | ligar a Vercel ao GitHub e proteger a `main` (exigir PR e CI verde)                             | 0.2, 0.4      |
 | Métricas de uso e desempenho | ligar Web Analytics e Speed Insights no painel da Vercel                                        | 7.1           |
 | Tempo real                   | conta gratuita no Pusher ou Ably                                                                | 5.3           |
@@ -665,6 +665,6 @@ Tudo que o plano previa e ainda não existe, agrupado pelo que destrava cada ite
    Falta ligar a Vercel ao GitHub para ter preview por PR.
 2. ~~Encerrar sessões ao trocar a senha~~ **feito**: troca e redefinição de senha, ligar o 2FA e
    "Sair de todos os dispositivos" encerram todas as sessões abertas.
-3. **Resend e Anthropic.** Duas chaves que acendem recursos já prontos (convites, recuperação de senha,
-   notificações por e-mail e IA).
+3. ~~Resend e Anthropic~~ **feito**: `RESEND_API_KEY` e, no lugar da Anthropic, `GEMINI_API_KEY` (a IA
+   aceita os dois provedores). Falta um domínio verificado e `EMAIL_FROM` para e-mail a qualquer pessoa.
 4. **Etiquetas, lixeira e atalhos.** São os itens de produto mais visíveis para quem usa todo dia.
