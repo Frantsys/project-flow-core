@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { NAV } from "@/lib/navigation";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
@@ -112,7 +113,7 @@ export function CommandMenu() {
 
   const go = (href: string) => {
     setOpen(false);
-    router.push(href);
+    router.push(href, { transitionTypes: NAV });
   };
   const run = (fn: () => void) => {
     setOpen(false);

@@ -1,4 +1,5 @@
 import { todayInBrazil } from "@/lib/labels";
+import { Reveal } from "@/components/reveal";
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -24,7 +25,9 @@ export default function CalendarPage({
 }: PageProps<"/w/[workspaceSlug]/projects/[projectKey]/calendar">) {
   return (
     <Suspense fallback={<Skeleton className="m-8 h-[560px] rounded-xl" />}>
-      <Calendar params={params} searchParams={searchParams} />
+      <Reveal>
+        <Calendar params={params} searchParams={searchParams} />
+      </Reveal>
     </Suspense>
   );
 }

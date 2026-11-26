@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Reveal } from "@/components/reveal";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import { getInvitationPreview } from "@/server/services/invitation.service";
@@ -14,7 +15,9 @@ export default function InvitePage({ searchParams }: PageProps<"/invite">) {
       <Logo />
       <main className="w-full max-w-[420px]">
         <Suspense fallback={<Skeleton className="h-48 rounded-xl" />}>
-          <Invite searchParams={searchParams} />
+          <Reveal>
+            <Invite searchParams={searchParams} />
+          </Reveal>
         </Suspense>
       </main>
     </div>

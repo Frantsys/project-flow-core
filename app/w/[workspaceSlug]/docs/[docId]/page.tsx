@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Reveal } from "@/components/reveal";
 import { notFound } from "next/navigation";
 import { getDocuments, getWorkspace, requireUser } from "@/lib/session";
 import { getDocument } from "@/server/services/document.service";
@@ -8,7 +9,9 @@ import { DocumentEditor } from "@/components/docs/document-editor";
 export default function DocumentPage({ params }: PageProps<"/w/[workspaceSlug]/docs/[docId]">) {
   return (
     <Suspense fallback={<Skeleton className="m-8 h-96 flex-1" />}>
-      <DocumentView params={params} />
+      <Reveal>
+        <DocumentView params={params} />
+      </Reveal>
     </Suspense>
   );
 }

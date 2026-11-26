@@ -89,7 +89,8 @@ export default function Home() {
 
       <main className="flex-1">
         <section className="mx-auto grid max-w-[1120px] items-center gap-12 px-6 py-16 md:py-24 lg:grid-cols-[1.05fr_1fr]">
-          <div className="flex flex-col gap-6">
+          {/* entrada em cascata: o texto chega primeiro, o quadro de exemplo logo depois */}
+          <div className="flex flex-col gap-6 [&>*]:motion-safe:animate-in [&>*]:motion-safe:duration-700 [&>*]:motion-safe:fill-mode-backwards [&>*]:motion-safe:fade-in [&>*]:motion-safe:slide-in-from-bottom-2 [&>*:nth-child(2)]:delay-75 [&>*:nth-child(3)]:delay-150 [&>*:nth-child(4)]:delay-200 [&>*:nth-child(5)]:delay-300">
             <Badge variant="outline" className="self-start">
               Gratuito para times pequenos
             </Badge>
@@ -111,21 +112,26 @@ export default function Home() {
             </p>
           </div>
 
-          <div aria-hidden="true" className="rounded-2xl border bg-sidebar p-4 shadow-sm">
+          <div
+            aria-hidden="true"
+            className="rounded-2xl border bg-sidebar p-4 shadow-sm motion-safe:animate-in motion-safe:delay-200 motion-safe:duration-700 motion-safe:fill-mode-backwards motion-safe:zoom-in-95 motion-safe:fade-in"
+          >
             <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
               Project Flow
               <span className="rounded border px-1.5 text-[11px] font-medium text-muted-foreground">PF</span>
             </div>
             <div className="grid grid-cols-3 gap-2.5">
-              {PREVIEW.map((col) => (
+              {PREVIEW.map((col, ci) => (
                 <div key={col.name} className="flex flex-col gap-2 rounded-xl bg-muted p-2">
                   <span className="px-1 text-xs font-semibold">
                     {col.name} <span className="text-muted-foreground">{col.cards.length}</span>
                   </span>
-                  {col.cards.map((c) => (
+                  {col.cards.map((c, i) => (
                     <div
                       key={c.code}
-                      className="flex flex-col gap-1.5 rounded-lg border bg-card p-2 shadow-xs"
+                      // os cards entram um depois do outro, coluna a coluna
+                      style={{ animationDelay: `${450 + ci * 120 + i * 80}ms` }}
+                      className="flex flex-col gap-1.5 rounded-lg border bg-card p-2 shadow-xs motion-safe:animate-in motion-safe:duration-500 motion-safe:fill-mode-backwards motion-safe:fade-in motion-safe:slide-in-from-bottom-1"
                     >
                       <span className="font-mono text-[10px] text-text-secondary">{c.code}</span>
                       <span className="text-xs leading-snug font-medium">{c.title}</span>

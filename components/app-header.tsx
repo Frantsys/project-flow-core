@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { NAV } from "@/lib/navigation";
 import Link from "next/link";
 import { Building2, ListChecks } from "lucide-react";
 import { requireUser } from "@/lib/session";
@@ -20,7 +21,10 @@ const LINKS = [
  */
 export function AppHeader({ current }: { current?: (typeof LINKS)[number]["href"] }) {
   return (
-    <header className="flex h-14 items-center justify-between gap-3 border-b bg-background px-4 sm:px-6">
+    <header
+      style={{ viewTransitionName: "app-header" }}
+      className="flex h-14 items-center justify-between gap-3 border-b bg-background px-4 sm:px-6"
+    >
       <Logo />
       <div className="flex items-center gap-1 sm:gap-2">
         <CommandMenuButton className="hidden w-56 md:flex" />
@@ -32,7 +36,13 @@ export function AppHeader({ current }: { current?: (typeof LINKS)[number]["href"
               variant="ghost"
               className="aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground"
             >
-              <Link href={href} aria-current={current === href ? "page" : undefined} aria-label={label}>
+              <Link
+                href={href}
+                transitionTypes={NAV}
+                aria-current={current === href ? "page" : undefined}
+                aria-label={label}
+                style={current === href ? { viewTransitionName: "header-active" } : undefined}
+              >
                 <Icon aria-hidden="true" />
                 <span className="hidden sm:inline">{label}</span>
               </Link>

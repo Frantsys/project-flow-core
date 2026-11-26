@@ -12,6 +12,13 @@ const user = { name: "Pessoa E2E", email: `e2e-${stamp}@teste.dev`, password: "s
 
 /** Falhas sérias de acessibilidade na página atual (ignora avisos menores). */
 async function expectAccessible(page: Page, label: string) {
+  // no meio de uma entrada animada o texto ainda está transparente e o contraste sai errado:
+  // espera as animações com fim (o brilho infinito do esqueleto não conta)
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity)
+  );
   const { violations } = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
   const serious = violations.filter((v) => v.impact === "serious" || v.impact === "critical");
   expect(

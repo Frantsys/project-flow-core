@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Reveal } from "@/components/reveal";
 import { notFound } from "next/navigation";
 import { getWorkspace, requireUser } from "@/lib/session";
 import { getProjectByKey } from "@/server/services/project.service";
@@ -13,7 +14,9 @@ export default function ReportsPage({
 }: PageProps<"/w/[workspaceSlug]/projects/[projectKey]/reports">) {
   return (
     <Suspense fallback={<Skeleton className="m-8 h-[560px] rounded-xl" />}>
-      <Reports params={params} />
+      <Reveal>
+        <Reports params={params} />
+      </Reveal>
     </Suspense>
   );
 }

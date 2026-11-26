@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Reveal } from "@/components/reveal";
 import { notFound } from "next/navigation";
 import { Plus } from "lucide-react";
 import { getWorkspace, requireUser } from "@/lib/session";
@@ -17,7 +18,9 @@ import { collectTags } from "@/lib/task-filters";
 export default function BoardPage({ params }: PageProps<"/w/[workspaceSlug]/projects/[projectKey]">) {
   return (
     <Suspense fallback={<BoardSkeleton />}>
-      <Board params={params} />
+      <Reveal>
+        <Board params={params} />
+      </Reveal>
     </Suspense>
   );
 }

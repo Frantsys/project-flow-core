@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Reveal } from "@/components/reveal";
 import type { Metadata } from "next";
 import { BellOff } from "lucide-react";
 import { requireUser } from "@/lib/session";
@@ -22,7 +23,9 @@ export default function InboxPage() {
           </p>
         </div>
         <Suspense fallback={<Skeleton className="h-72 rounded-xl" />}>
-          <Inbox />
+          <Reveal>
+            <Inbox />
+          </Reveal>
         </Suspense>
       </main>
     </div>

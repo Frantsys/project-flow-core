@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Reveal } from "@/components/reveal";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { PartyPopper } from "lucide-react";
@@ -27,7 +28,9 @@ export default function MyWorkPage() {
           </p>
         </div>
         <Suspense fallback={<Skeleton className="h-80 rounded-xl" />}>
-          <MyTasks />
+          <Reveal>
+            <MyTasks />
+          </Reveal>
         </Suspense>
       </main>
     </div>

@@ -1,4 +1,5 @@
 import { can } from "@/lib/permissions";
+import { Reveal } from "@/components/reveal";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -35,7 +36,9 @@ export default function SettingsPage({ params, searchParams }: PageProps<"/w/[wo
         <p className="text-sm text-muted-foreground">Gerencie o workspace, os membros e seus papéis.</p>
       </div>
       <Suspense fallback={<Skeleton className="h-72 rounded-xl" />}>
-        <Settings params={params} searchParams={searchParams} />
+        <Reveal>
+          <Settings params={params} searchParams={searchParams} />
+        </Reveal>
       </Suspense>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { NAV } from "@/lib/navigation";
 import { usePathname, useRouter } from "next/navigation";
 import { isTyping, SHORTCUTS_EVENT } from "./command-menu";
 import { MY_WORK_EVENT } from "./my-work-panel";
@@ -89,7 +90,7 @@ export function KeyboardShortcuts() {
           go.run();
         } else if (to) {
           e.preventDefault();
-          router.push(to);
+          router.push(to, { transitionTypes: NAV });
         }
         return;
       }

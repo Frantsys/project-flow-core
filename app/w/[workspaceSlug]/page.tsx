@@ -1,4 +1,5 @@
 import { can } from "@/lib/permissions";
+import { Reveal } from "@/components/reveal";
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -38,7 +39,9 @@ import { getOnboarding } from "@/server/services/onboarding.service";
 export default function WorkspaceOverviewPage({ params }: PageProps<"/w/[workspaceSlug]">) {
   return (
     <Suspense fallback={<OverviewSkeleton />}>
-      <Overview params={params} />
+      <Reveal>
+        <Overview params={params} />
+      </Reveal>
     </Suspense>
   );
 }

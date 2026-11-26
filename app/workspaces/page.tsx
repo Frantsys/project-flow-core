@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Reveal } from "@/components/reveal";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Building2, Plus } from "lucide-react";
@@ -44,7 +45,9 @@ export default function WorkspacesPage() {
           />
         </div>
         <Suspense fallback={<GridSkeleton />}>
-          <WorkspaceGrid />
+          <Reveal>
+            <WorkspaceGrid />
+          </Reveal>
         </Suspense>
       </main>
     </div>

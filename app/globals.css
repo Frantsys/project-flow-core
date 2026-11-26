@@ -185,3 +185,99 @@
     @apply font-sans;
   }
 }
+
+/*
+ * Movimento. Uma linguagem só para o app inteiro, curta e sem exagero:
+ * - trocar de tela (links marcados com o tipo "nav"): o conteúdo antigo some rápido e o novo
+ *   sobe 6 px enquanto aparece; barra lateral e cabeçalho ficam parados como âncora;
+ * - conteúdo que chega depois do esqueleto (Suspense) aparece do mesmo jeito;
+ * - o item ativo do menu e a aba ativa do projeto deslizam até o novo lugar.
+ * Saída mais rápida que a entrada, para o antigo não disputar atenção com o novo.
+ */
+:root {
+  --motion-exit: 120ms;
+  --motion-enter: 220ms;
+  --motion-move: 320ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes pf-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pf-rise {
+  from {
+    translate: 0 6px;
+  }
+}
+@keyframes pf-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+::view-transition {
+  /* cliques durante a animação vão para a página nova */
+  pointer-events: none;
+}
+::view-transition-old(.page) {
+  animation: var(--motion-exit) ease-in both pf-fade reverse;
+}
+::view-transition-new(.page),
+::view-transition-new(.reveal) {
+  animation:
+    var(--motion-enter) var(--ease-out) var(--motion-exit) both pf-fade,
+    var(--motion-move) var(--ease-out) both pf-rise;
+}
+::view-transition-old(.reveal) {
+  animation: var(--motion-exit) ease-in both pf-fade reverse;
+}
+/* item ativo e aba ativa: só o deslize, sem piscar o texto */
+::view-transition-group(nav-active),
+::view-transition-group(tab-active),
+::view-transition-group(header-active) {
+  animation-duration: var(--motion-move);
+  animation-timing-function: var(--ease-out);
+}
+/* o fundo ativo da barra passa por cima da barra (âncora opaca); a mistura deixa o texto que
+   está embaixo à vista: multiply no claro (fundo mais escuro que a barra), lighten no escuro */
+::view-transition-group(nav-active),
+::view-transition-group(header-active) {
+  z-index: 60;
+}
+::view-transition-group(nav-active) {
+  mix-blend-mode: multiply;
+}
+.dark::view-transition-group(nav-active) {
+  mix-blend-mode: lighten;
+}
+/* âncoras: não se mexem durante a troca de tela */
+::view-transition-group(app-sidebar),
+::view-transition-group(app-header),
+::view-transition-group(buddy) {
+  animation: none;
+  z-index: 50;
+}
+::view-transition-old(app-sidebar),
+::view-transition-old(app-header),
+::view-transition-old(buddy) {
+  display: none;
+}
+::view-transition-new(app-sidebar),
+::view-transition-new(app-header),
+::view-transition-new(buddy) {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}

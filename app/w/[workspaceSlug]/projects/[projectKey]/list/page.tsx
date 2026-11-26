@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { Reveal } from "@/components/reveal";
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -27,7 +28,9 @@ export default function ListPage({
 }: PageProps<"/w/[workspaceSlug]/projects/[projectKey]/list">) {
   return (
     <Suspense fallback={<Skeleton className="m-8 h-96 rounded-xl" />}>
-      <TaskList params={params} searchParams={searchParams} />
+      <Reveal>
+        <TaskList params={params} searchParams={searchParams} />
+      </Reveal>
     </Suspense>
   );
 }

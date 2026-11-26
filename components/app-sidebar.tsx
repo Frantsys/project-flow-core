@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment } from "react";
+import { NAV } from "@/lib/navigation";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Check, ChevronsUpDown, FileText, House, Plus, SlidersHorizontal, Trash2 } from "lucide-react";
@@ -60,7 +61,7 @@ export function AppSidebar({ user, workspace, workspaces }: AppSidebarProps) {
   ];
 
   return (
-    <Sidebar>
+    <Sidebar style={{ viewTransitionName: "app-sidebar" }}>
       <SidebarHeader>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -81,7 +82,7 @@ export function AppSidebar({ user, workspace, workspaces }: AppSidebarProps) {
             </DropdownMenuLabel>
             {workspaces.map((ws) => (
               <DropdownMenuItem key={ws.id} asChild>
-                <Link href={`/w/${ws.slug}`}>
+                <Link href={`/w/${ws.slug}`} transitionTypes={NAV}>
                   <span className="flex-1 truncate">{ws.name}</span>
                   {ws.slug === workspace.slug && <Check aria-label="Atual" />}
                 </Link>
@@ -89,7 +90,7 @@ export function AppSidebar({ user, workspace, workspaces }: AppSidebarProps) {
             ))}
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/workspaces">
+              <Link href="/workspaces" transitionTypes={NAV}>
                 <Plus aria-hidden="true" />
                 Ver todos ou criar
               </Link>
@@ -108,8 +109,13 @@ export function AppSidebar({ user, workspace, workspaces }: AppSidebarProps) {
             {nav.map((item, i) => (
               <Fragment key={item.href}>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={item.active}>
-                    <Link href={item.href} aria-current={item.active ? "page" : undefined}>
+                  <SidebarMenuButton asChild isActive={item.active} className={PILL_BUTTON}>
+                    <Link
+                      href={item.href}
+                      transitionTypes={NAV}
+                      aria-current={item.active ? "page" : undefined}
+                    >
+                      {item.active && <ActivePill />}
                       <item.icon aria-hidden="true" />
                       {item.label}
                     </Link>
@@ -140,8 +146,9 @@ export function AppSidebar({ user, workspace, workspaces }: AppSidebarProps) {
               const active = pathname.startsWith(href);
               return (
                 <SidebarMenuItem key={project.id}>
-                  <SidebarMenuButton asChild isActive={active}>
-                    <Link href={href} aria-current={active ? "page" : undefined}>
+                  <SidebarMenuButton asChild isActive={active} className={PILL_BUTTON}>
+                    <Link href={href} transitionTypes={NAV} aria-current={active ? "page" : undefined}>
+                      {active && <ActivePill />}
                       <Badge variant="outline" className="h-5 px-1.5 text-[11px]">
                         {project.key}
                       </Badge>
@@ -159,5 +166,19 @@ export function AppSidebar({ user, workspace, workspaces }: AppSidebarProps) {
         <UserMenu user={user} showName />
       </SidebarFooter>
     </Sidebar>
+  );
+}
+
+// o fundo do item ativo é uma peça à parte, que desliza entre os itens na troca de tela
+// (globals.css, nav-active); o texto fica no lugar
+const PILL_BUTTON = "relative isolate data-active:bg-transparent";
+
+function ActivePill() {
+  return (
+    <span
+      aria-hidden="true"
+      className="absolute inset-0 -z-10 rounded-md bg-sidebar-accent"
+      style={{ viewTransitionName: "nav-active" }}
+    />
   );
 }

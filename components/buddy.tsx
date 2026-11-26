@@ -97,6 +97,7 @@ export function Buddy() {
         ref={triggerRef}
         onClick={() => setOpen(true)}
         className="fixed right-4 bottom-4 z-40 h-11 gap-2 rounded-full px-4 shadow-lg"
+        style={{ viewTransitionName: "buddy" }}
         aria-label="Abrir o assistente"
       >
         <Sparkles aria-hidden="true" />
@@ -108,6 +109,7 @@ export function Buddy() {
   return (
     <section
       aria-label="Assistente"
+      style={{ viewTransitionName: "buddy" }}
       onKeyDown={(e) => e.key === "Escape" && close()}
       className="fixed inset-x-2 bottom-2 z-40 flex max-h-[min(640px,calc(100dvh-1rem))] flex-col rounded-xl border bg-popover text-popover-foreground shadow-2xl sm:inset-x-auto sm:right-4 sm:bottom-4 sm:w-[400px]"
     >

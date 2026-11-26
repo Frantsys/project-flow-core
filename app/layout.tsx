@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, ViewTransition } from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
@@ -50,7 +50,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <TooltipProvider>{children}</TooltipProvider>
+          <TooltipProvider>
+            {/* troca de tela pelos links de navegação (tipo "nav"): ver globals.css, "Movimento" */}
+            <ViewTransition default={{ nav: "page", default: "none" }}>{children}</ViewTransition>
+          </TooltipProvider>
           {/* lê a rota atual (usePathname): fica fora do HTML pré-renderizado */}
           <Suspense fallback={null}>
             <CommandMenu />

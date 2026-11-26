@@ -465,7 +465,7 @@ function SortableTaskCard({
       // arrasta pelo card inteiro (mouse ou toque); Enter no título continua abrindo a tarefa
       onPointerDown={listeners?.onPointerDown as React.PointerEventHandler<HTMLDivElement> | undefined}
       className={cn(
-        "relative touch-manipulation rounded-[10px] shadow-xs transition-colors hover:border-border-strong has-[a:focus-visible]:ring-3 has-[a:focus-visible]:ring-ring/50",
+        "relative touch-manipulation rounded-[10px] shadow-xs transition-[translate,box-shadow,border-color] duration-150 hover:-translate-y-px hover:border-border-strong hover:shadow-sm has-[a:focus-visible]:ring-3 has-[a:focus-visible]:ring-ring/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0",
         isDragging && "z-20 opacity-80 shadow-lg ring-2 ring-ring/40"
       )}
     >

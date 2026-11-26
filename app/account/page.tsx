@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Reveal } from "@/components/reveal";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/session";
@@ -19,7 +20,9 @@ export default function AccountPage() {
           <p className="text-sm text-muted-foreground">Perfil, acesso e segurança da sua conta.</p>
         </div>
         <Suspense fallback={<AccountSkeleton />}>
-          <AccountContent />
+          <Reveal>
+            <AccountContent />
+          </Reveal>
         </Suspense>
       </main>
     </div>

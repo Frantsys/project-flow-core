@@ -1,4 +1,5 @@
 import { can } from "@/lib/permissions";
+import { Reveal } from "@/components/reveal";
 import { collectTags, filterTasks, parseTaskFilters } from "@/lib/task-filters";
 import { TaskFilterBar } from "@/components/projects/task-filter-bar";
 import { Suspense } from "react";
@@ -30,7 +31,9 @@ export default function BacklogPage({
 }: PageProps<"/w/[workspaceSlug]/projects/[projectKey]/backlog">) {
   return (
     <Suspense fallback={<BacklogSkeleton />}>
-      <Backlog params={params} searchParams={searchParams} />
+      <Reveal>
+        <Backlog params={params} searchParams={searchParams} />
+      </Reveal>
     </Suspense>
   );
 }

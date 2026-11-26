@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Reveal } from "@/components/reveal";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Trash2 } from "lucide-react";
@@ -21,7 +22,9 @@ export default function TrashPage({ params }: PageProps<"/w/[workspaceSlug]/tras
         </p>
       </div>
       <Suspense fallback={<Skeleton className="h-60 rounded-xl" />}>
-        <Trash params={params} />
+        <Reveal>
+          <Trash params={params} />
+        </Reveal>
       </Suspense>
     </div>
   );
