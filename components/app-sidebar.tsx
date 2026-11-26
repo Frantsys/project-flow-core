@@ -120,7 +120,10 @@ export function AppSidebar({ user, workspace, workspaces }: AppSidebarProps) {
           <SidebarGroupLabel>Projetos</SidebarGroupLabel>
           <SidebarMenu>
             {workspace.projects.length === 0 && (
-              <p className="px-2 text-[13px] text-muted-foreground">Nenhum projeto ainda.</p>
+              // dentro de um item: o SidebarMenu é uma <ul>
+              <SidebarMenuItem>
+                <p className="px-2 text-[13px] text-muted-foreground">Nenhum projeto ainda.</p>
+              </SidebarMenuItem>
             )}
             {workspace.projects.map((project) => {
               const href = `${base}/projects/${project.key}`;

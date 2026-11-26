@@ -66,6 +66,8 @@ function Item({
   const Comp = asChild ? Slot.Root : "div"
   return (
     <Comp
+      // Project Flow: o ItemGroup é role="list"; sem listitem o leitor de tela não conta os itens
+      role="listitem"
       data-slot="item"
       data-variant={variant}
       data-size={size}
