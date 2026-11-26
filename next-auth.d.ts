@@ -18,5 +18,9 @@ declare module "next-auth/jwt" {
   interface JWT {
     user?: CustomAuthUser;
     demo?: boolean;
+    /** sessionVersion do usuário quando o token foi emitido. */
+    sv?: number;
+    /** A versão mudou depois: a sessão foi encerrada em outro lugar. */
+    revoked?: boolean;
   }
 }

@@ -10,6 +10,7 @@ import { requestPasswordResetAction, resendVerificationAction } from "@/server/a
 import {
   changePasswordAction,
   deleteAccountAction,
+  signOutEverywhereAction,
   updateNotificationPrefsAction,
   updateProfileAction,
 } from "@/server/actions/account.actions";
@@ -55,6 +56,7 @@ export function AccountSettings({ account }: { account: AccountDTO }) {
           <TwoFactorCard enabled={account.twoFactorEnabled} recoveryCodesLeft={account.recoveryCodesLeft} />
         )}
         <ProvidersCard providers={account.providers} />
+        <SessionsCard />
         <DeleteAccountCard email={account.email} ownedWorkspaces={account.ownedWorkspaces} />
       </div>
     </SessionProvider>
@@ -185,7 +187,8 @@ function PasswordCard({ email, hasPassword }: { email: string; hasPassword: bool
     }
     setErrors({});
     form.reset();
-    toast.success("Senha alterada.");
+    // a troca encerrou todas as sessões, esta também: entra de novo com a senha nova
+    await signOut({ callbackUrl: "/auth/login?error=PasswordChanged" });
   }
 
   if (!hasPassword) {
@@ -408,6 +411,39 @@ function NotificationsCard({ notifyByEmail }: { notifyByEmail: boolean }) {
           </div>
         </div>
       </CardContent>
+    </Card>
+  );
+}
+
+function SessionsCard() {
+  const [pending, setPending] = useState(false);
+
+  async function signOutEverywhere() {
+    setPending(true);
+    const result = await signOutEverywhereAction({});
+    if (!result.success) {
+      setPending(false);
+      toast.error(result.error);
+      return;
+    }
+    await signOut({ callbackUrl: "/auth/login?error=SessionRevoked" });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-semibold">Sessões</CardTitle>
+        <CardDescription>
+          Esqueceu a conta aberta num computador emprestado ou perdeu o celular? Encerre todas as sessões;
+          você entra de novo aqui em seguida. Trocar a senha também encerra todas.
+        </CardDescription>
+      </CardHeader>
+      <CardFooter>
+        <Button variant="outline" onClick={signOutEverywhere} disabled={pending}>
+          {pending && <Spinner />}
+          Sair de todos os dispositivos
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

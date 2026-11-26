@@ -28,6 +28,8 @@ const URL_ERRORS: Record<string, string> = {
   Callback: PROVIDER_FAILED,
   CredentialsSignin: WRONG_CREDENTIALS,
   SessionRequired: "Entre para continuar.",
+  SessionRevoked: "Sua sessão foi encerrada. Entre de novo para continuar.",
+  PasswordChanged: "Senha alterada. Entre de novo com a senha nova.",
   EmailNotVerified:
     "O e-mail dessa conta não está verificado no provedor. Verifique o e-mail lá ou entre com e-mail e senha.",
 };

@@ -89,7 +89,11 @@ export const resetPasswordAction = createAction({
 
     const passwordHash = await bcrypt.hash(password, 12);
     // o link chegou no e-mail da pessoa: isso também confirma o e-mail
-    await User.updateOne({ _id: userId }, { $set: { passwordHash, emailVerified: new Date() } });
+    // e encerra as sessões abertas: quem pede uma senha nova pode estar com a conta invadida
+    await User.updateOne(
+      { _id: userId },
+      { $set: { passwordHash, emailVerified: new Date() }, $inc: { sessionVersion: 1 } }
+    );
     return { reset: true };
   },
 });

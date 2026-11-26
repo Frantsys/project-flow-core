@@ -61,6 +61,8 @@ export const changePasswordAction = createAction({
     }
 
     user.passwordHash = await bcrypt.hash(password, 12);
+    // senha nova encerra todas as sessões, inclusive em aparelhos que alguém possa ter acessado
+    user.sessionVersion = (user.sessionVersion ?? 0) + 1;
     await user.save();
     return { changed: true };
   },
@@ -151,6 +153,8 @@ export const confirmTwoFactorAction = createAction({
           twoFactorLastStep: step,
           recoveryCodes: recoveryCodes.map(hashRecoveryCode),
         },
+        // ligar a proteção só adianta se derrubar as sessões que já estavam abertas sem ela
+        $inc: { sessionVersion: 1 },
       }
     );
     return { recoveryCodes };
@@ -178,5 +182,16 @@ export const disableTwoFactorAction = createAction({
       }
     );
     return { disabled: true };
+  },
+});
+
+/** Encerra todas as sessões da conta, em todos os aparelhos (inclusive esta). */
+export const signOutEverywhereAction = createAction({
+  name: "account.signOutEverywhere",
+  schema: z.object({}),
+  handler: async (_input, { userId }) => {
+    await dbConnect();
+    await User.updateOne({ _id: userId }, { $inc: { sessionVersion: 1 } });
+    return { done: true };
   },
 });

@@ -622,8 +622,8 @@ Tudo que o plano previa e ainda não existe, agrupado pelo que destrava cada ite
 
 **Segurança e contas**
 
-- Encerrar as outras sessões ao trocar a senha ou ligar a verificação em duas etapas (hoje a sessão
-  é um JWT e continua valendo até expirar).
+- ~~Encerrar as outras sessões ao trocar a senha ou ligar a verificação em duas etapas~~ **feito**:
+  versão de sessão no usuário, conferida a cada leitura do JWT; botão "Sair de todos os dispositivos".
 - Exigir e-mail confirmado para ações sensíveis (convidar, excluir workspace) (1.3).
 - Exportar meus dados em JSON e lista de sessões em Minha conta (1.5).
 - Papel Convidado, só leitura (1.7).
@@ -663,7 +663,8 @@ Tudo que o plano previa e ainda não existe, agrupado pelo que destrava cada ite
 
 1. ~~Testes ponta a ponta (Playwright)~~ **feito**: roteiro completo e axe em `e2e/`, rodando na CI.
    Falta ligar a Vercel ao GitHub para ter preview por PR.
-2. **Encerrar sessões ao trocar a senha.** É a lacuna de segurança mais concreta que sobrou.
+2. ~~Encerrar sessões ao trocar a senha~~ **feito**: troca e redefinição de senha, ligar o 2FA e
+   "Sair de todos os dispositivos" encerram todas as sessões abertas.
 3. **Resend e Anthropic.** Duas chaves que acendem recursos já prontos (convites, recuperação de senha,
    notificações por e-mail e IA).
 4. **Etiquetas, lixeira e atalhos.** São os itens de produto mais visíveis para quem usa todo dia.

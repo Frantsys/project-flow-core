@@ -14,6 +14,8 @@ export interface IUser extends Document {
   passwordHash?: string | null;
   /** Recebe por e-mail as notificações de atribuição e menção. */
   notifyByEmail: boolean;
+  /** Sobe para encerrar todas as sessões abertas (troca de senha, "sair de todos os dispositivos"). */
+  sessionVersion: number;
   /** Verificação em duas etapas (só para login com e-mail e senha). */
   twoFactorEnabled: boolean;
   /** Segredo TOTP criptografado (server/lib/totp.ts); o pendente é o da configuração em andamento. */
@@ -36,6 +38,7 @@ const UserSchema = new Schema<IUser>(
 
     passwordHash: { type: String, select: false },
     notifyByEmail: { type: Boolean, default: true },
+    sessionVersion: { type: Number, default: 0 },
     twoFactorEnabled: { type: Boolean, default: false },
     twoFactorSecret: { type: String, default: null, select: false },
     twoFactorPendingSecret: { type: String, default: null, select: false },

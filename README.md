@@ -33,6 +33,8 @@ workspace de exemplo sem cadastro (só leitura).
 - **Instalável (PWA)** no celular e no computador.
 - **Verificação em duas etapas** (TOTP, compatível com Google Authenticator, Authy e 1Password),
   com códigos de recuperação; segredo criptografado no banco e cada código vale uma vez.
+- **Sessões:** trocar ou redefinir a senha e ligar o 2FA encerram todas as sessões abertas; "Sair de
+  todos os dispositivos" em Minha conta.
 - **IA na tarefa** (opcional, com `ANTHROPIC_API_KEY`): resumo da tarefa e sugestão de subtarefas
   com o Claude Haiku 5.5, limitado a 50 usos por workspace por dia.
 - **API pública v1** só leitura, com tokens por workspace e especificação OpenAPI em

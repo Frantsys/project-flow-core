@@ -17,6 +17,8 @@ export async function proxy(req: NextRequest) {
   if (!token && isPublicPage) return NextResponse.next();
   // links que chegam por e-mail: precisam abrir mesmo com alguém logado
   const isEmailLink = pathname === "/auth/verify" || pathname === "/auth/reset";
+  // sessão encerrada em outro lugar: o cookie ainda existe, mas precisa ver o login (senão vira um loop)
+  const isRevoked = pathname === "/auth/login" && req.nextUrl.searchParams.get("error") === "SessionRevoked";
 
   if (!token && !isAuthRoute) {
     const loginUrl = new URL("/auth/login", req.url);
@@ -30,7 +32,7 @@ export async function proxy(req: NextRequest) {
   }
 
   // Caso o usuário já esteja autenticado e tenta acessar /login ou /signup, é redirecionado para home
-  if (token && isAuthRoute && !isEmailLink) {
+  if (token && isAuthRoute && !isEmailLink && !isRevoked) {
     return NextResponse.redirect(new URL("/workspaces", req.url));
   }
 

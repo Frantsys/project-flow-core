@@ -21,7 +21,8 @@ export interface CurrentUser {
  */
 export const requireUser = cache(async (): Promise<CurrentUser> => {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) redirect("/auth/login");
+  // o proxy já manda quem não tem cookie para o login; aqui chega quem tem cookie de uma sessão encerrada
+  if (!session?.user?.id) redirect("/auth/login?error=SessionRevoked");
 
   return {
     id: session.user.id,

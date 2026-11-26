@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { toast } from "sonner";
 import { Copy, ShieldCheck } from "lucide-react";
 import {
@@ -114,7 +115,7 @@ export function TwoFactorCard({
           </p>
           <p className="text-sm text-muted-foreground">
             Se perder o celular, cada código abaixo entra uma vez no lugar do código do aplicativo. Eles não
-            aparecem de novo.
+            aparecem de novo. As sessões abertas foram encerradas: depois de guardar, entre de novo.
           </p>
           <ul className="grid grid-cols-2 gap-2 font-mono text-sm sm:max-w-sm">
             {stage.codes.map((c) => (
@@ -186,12 +187,10 @@ export function TwoFactorCard({
               Copiar códigos
             </Button>
             <Button
-              onClick={() => {
-                setStage({ name: "idle" });
-                router.refresh();
-              }}
+              // ligar a verificação encerrou as sessões abertas, esta também: entra de novo, já com o código
+              onClick={() => signOut({ callbackUrl: "/auth/login?error=SessionRevoked" })}
             >
-              Já guardei
+              Já guardei, entrar de novo
             </Button>
           </>
         )}

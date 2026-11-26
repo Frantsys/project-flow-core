@@ -166,11 +166,23 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, trigger, session, account }) {
       // no login: lembra se a sessão é da demonstração (o bloqueio de escrita usa isso)
       if (account) token.demo = account.provider === "demo";
+
+      // A sessão é um JWT, que não se apaga no servidor. Para encerrar sessões, o usuário tem uma
+      // versão: o token guarda a do login e cada leitura confere com o banco (uma consulta por _id).
+      if (token.sub) {
+        await dbConnect();
+        const current = await User.findById(token.sub).select("sessionVersion").lean();
+        const version = current?.sessionVersion ?? 0;
+        if (account) token.sv = version;
+        else if (!current || version !== (token.sv ?? 0)) token.revoked = true;
+      }
       // useSession().update({ name }) depois de editar o perfil em Minha conta
       if (trigger === "update" && typeof session?.name === "string") token.name = session.name;
       return token;
     },
     async session({ session, token }) {
+      // sessão encerrada (troca de senha, outro dispositivo) ou conta excluída: fica sem usuário
+      if (token.revoked) return { expires: session.expires };
       if (session.user) {
         session.user.id = token.sub!; // Adiciona ID na sessão
         session.user.demo = !!token.demo;
