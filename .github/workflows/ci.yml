@@ -11,9 +11,9 @@ concurrency:
 
 jobs:
   check:
-    name: Tipos, lint, testes e build
+    name: Tipos, lint, testes, build e ponta a ponta
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
 
@@ -48,3 +48,23 @@ jobs:
           # o build só verifica se a variável existe; nada conecta neste endereço
           MONGODB_URI: mongodb://127.0.0.1:1/ci
           NEXTAUTH_SECRET: ci-only-secret
+
+      # ponta a ponta: o build acima, servido com um MongoDB em memória (e2e/serve.mjs)
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Navegador dos testes ponta a ponta
+        run: npx playwright install --with-deps chromium
+
+      - name: Testes ponta a ponta e acessibilidade
+        run: npm run test:e2e
+
+      - name: Relatório do Playwright
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7

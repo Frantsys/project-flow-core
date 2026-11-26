@@ -49,7 +49,10 @@ export async function sendEmail(email: Email) {
   const key = process.env.RESEND_API_KEY;
 
   if (!key) {
-    if (process.env.NODE_ENV === "production") throw new Error("RESEND_API_KEY não configurada.");
+    // EMAIL_LOG=1: build de produção nos testes ponta a ponta, sem Resend
+    if (process.env.NODE_ENV === "production" && process.env.EMAIL_LOG !== "1") {
+      throw new Error("RESEND_API_KEY não configurada.");
+    }
     console.info(`[email] para ${email.to} · ${email.subject}\n${text}`);
     return;
   }

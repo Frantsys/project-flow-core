@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
   resolve: {
@@ -9,6 +9,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // e2e/ roda no Playwright, não no Vitest
+    exclude: [...configDefaults.exclude, "e2e/**"],
     globalSetup: ["./test/global-setup.ts"],
     setupFiles: ["./test/setup.ts"],
     // um só MongoDB em memória para todos os arquivos: rodar em sequência evita um teste apagar dados de outro
