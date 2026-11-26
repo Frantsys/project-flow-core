@@ -242,24 +242,34 @@ export const editCommentSchema = addCommentSchema.extend({
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.");
 
-export const createSprintSchema = z
-  .object({
-    projectId: z.string().regex(objectIdRegex, "ID de projeto inválido."),
-    name: z
-      .string()
-      .trim()
-      .min(2, "O nome deve ter pelo menos 2 caracteres.")
-      .max(60, "O nome deve ter no máximo 60 caracteres."),
-    goal: z.string().trim().max(300, "A meta deve ter no máximo 300 caracteres.").optional(),
-    startDate: isoDate.nullable().optional(),
-    endDate: isoDate.nullable().optional(),
-  })
-  .refine((d) => !d.startDate || !d.endDate || d.startDate <= d.endDate, {
-    message: "A data de fim deve ser depois do início.",
-    path: ["endDate"],
-  });
+const sprintFields = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "O nome deve ter pelo menos 2 caracteres.")
+    .max(60, "O nome deve ter no máximo 60 caracteres."),
+  goal: z.string().trim().max(300, "A meta deve ter no máximo 300 caracteres.").optional(),
+  startDate: isoDate.nullable().optional(),
+  endDate: isoDate.nullable().optional(),
+});
+
+const datesInOrder: [
+  (d: { startDate?: string | null; endDate?: string | null }) => boolean,
+  { message: string; path: string[] },
+] = [
+  (d) => !d.startDate || !d.endDate || d.startDate <= d.endDate,
+  { message: "A data de fim deve ser depois do início.", path: ["endDate"] },
+];
+
+export const createSprintSchema = sprintFields
+  .extend({ projectId: z.string().regex(objectIdRegex, "ID de projeto inválido.") })
+  .refine(...datesInOrder);
 
 export type CreateSprintInput = z.infer<typeof createSprintSchema>;
+
+export const updateSprintSchema = sprintFields
+  .extend({ sprintId: z.string().regex(objectIdRegex, "ID de sprint inválido.") })
+  .refine(...datesInOrder);
 
 export const sprintIdSchema = z.object({
   sprintId: z.string().regex(objectIdRegex, "ID de sprint inválido."),

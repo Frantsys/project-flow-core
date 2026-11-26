@@ -3,9 +3,10 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Ellipsis, Trash2 } from "lucide-react";
+import { Ellipsis, Pencil, Trash2 } from "lucide-react";
 import { completeSprintAction, deleteSprintAction, startSprintAction } from "@/server/actions/sprint.actions";
 import { Button } from "@/components/ui/button";
+import { CreateSprintDialog } from "@/components/sprints/create-sprint-dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,14 +31,21 @@ import type { SprintStatus } from "@/server/db/types";
 const BACKLOG = "backlog";
 
 interface SprintActionsProps {
-  sprint: { id: string; name: string; status: SprintStatus };
+  sprint: {
+    id: string;
+    name: string;
+    goal: string;
+    status: SprintStatus;
+    startDate: string | null;
+    endDate: string | null;
+  };
   /** Códigos das tarefas que não estão no último status, para o aviso ao concluir. */
   openTaskCodes: string[];
   plannedSprints: { id: string; name: string }[];
   hasActiveSprint: boolean;
 }
 
-/** Iniciar, concluir ou excluir uma sprint. Só aparece para dono e admin. */
+/** Iniciar, editar, concluir ou excluir uma sprint. Só aparece para dono e admin. */
 export function SprintActions({
   sprint,
   openTaskCodes,
@@ -48,6 +56,7 @@ export function SprintActions({
   const [pending, startTransition] = useTransition();
   const [completeOpen, setCompleteOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [destination, setDestination] = useState(plannedSprints[0]?.id ?? BACKLOG);
 
   function run(
@@ -81,19 +90,6 @@ export function SprintActions({
             {pending && <Spinner />}
             Iniciar sprint
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label={`Mais ações de ${sprint.name}`}>
-                <Ellipsis aria-hidden="true" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
-                <Trash2 aria-hidden="true" />
-                Excluir sprint
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </>
       )}
 
@@ -103,6 +99,28 @@ export function SprintActions({
           Concluir sprint
         </Button>
       )}
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon-sm" aria-label={`Mais ações de ${sprint.name}`}>
+            <Ellipsis aria-hidden="true" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+            <Pencil aria-hidden="true" />
+            Editar sprint
+          </DropdownMenuItem>
+          {sprint.status === "PLANNED" && (
+            <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
+              <Trash2 aria-hidden="true" />
+              Excluir sprint
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <CreateSprintDialog sprint={sprint} open={editOpen} onOpenChange={setEditOpen} />
 
       <AlertDialog open={completeOpen} onOpenChange={setCompleteOpen}>
         <AlertDialogContent>

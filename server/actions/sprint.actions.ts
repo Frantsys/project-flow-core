@@ -7,7 +7,7 @@ import { Project, Sprint, Task } from "../db/models";
 import { createAction, fail } from "../lib/action";
 import { requirePermission } from "../lib/access";
 import { recordHistory } from "../services/history.service";
-import { completeSprintSchema, createSprintSchema, sprintIdSchema } from "../schemas";
+import { completeSprintSchema, createSprintSchema, sprintIdSchema, updateSprintSchema } from "../schemas";
 
 interface ProjectLean {
   _id: Types.ObjectId;
@@ -83,6 +83,25 @@ export const createSprintAction = createAction({
 
     revalidateProjectPages();
     return { id: sprint._id.toString() };
+  },
+});
+
+/** Edita nome, meta e datas. Sprint concluída fica como terminou (é o registro do que aconteceu). */
+export const updateSprintAction = createAction({
+  name: "sprint.update",
+  schema: updateSprintSchema,
+  handler: async ({ sprintId, name, goal, startDate, endDate }, { userId }) => {
+    const { sprint, history } = await loadSprint(sprintId, userId);
+    if (sprint.status === "COMPLETED") fail("Sprint concluída não pode ser editada.");
+
+    await Sprint.updateOne(
+      { _id: sprint._id },
+      { $set: { name, goal: goal ?? "", startDate: toDate(startDate), endDate: toDate(endDate) } }
+    );
+    await history("MODIFY", { _id: sprint._id, name });
+
+    revalidateProjectPages();
+    return { id: sprintId };
   },
 });
 

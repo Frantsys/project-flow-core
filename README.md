@@ -45,7 +45,8 @@ workspace de exemplo sem cadastro (só leitura).
   Concluído), criação rápida em cada coluna e "Mover para…".
 - **Tarefa completa** num painel lateral (ou página própria pelo link): status, prioridade, tipo,
   responsável, sprint, story points, prazo, descrição, subtarefas, comentários e histórico.
-- **Backlog e sprints:** planejar, iniciar e concluir sprints, decidindo para onde vão as tarefas abertas.
+- **Backlog e sprints:** planejar, editar, iniciar e concluir sprints, decidindo para onde vão as tarefas
+  abertas.
 - **Documentos** em árvore, gerais do workspace ou por projeto, com editor Markdown e aviso quando
   outra pessoa salvou no meio (ninguém sobrescreve o outro sem saber).
 - **Histórico** do workspace e atividade recente, em português.
