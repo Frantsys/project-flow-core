@@ -1,5 +1,6 @@
 "use client";
 
+import { DateField } from "@/components/date-field";
 import { can } from "@/lib/permissions";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -303,12 +304,13 @@ export function TaskDetail({
             <label htmlFor="task-due">Prazo</label>
           </dt>
           <dd>
-            <Input
+            <DateField
               id="task-due"
-              type="date"
+              label="Prazo"
+              placeholder="Sem prazo"
               defaultValue={task.dueDate?.slice(0, 10) ?? ""}
-              className="max-w-44"
-              onChange={(e) => update({ dueDate: e.target.value || null })}
+              className="max-w-56"
+              onChange={(iso) => update({ dueDate: iso || null })}
             />
           </dd>
         </dl>

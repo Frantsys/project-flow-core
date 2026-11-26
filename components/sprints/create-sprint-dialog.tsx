@@ -1,5 +1,6 @@
 "use client";
 
+import { DateField } from "@/components/date-field";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -125,23 +126,23 @@ export function CreateSprintDialog({
             <div className="grid gap-4 sm:grid-cols-2">
               <Field data-invalid={!!errors.startDate}>
                 <FieldLabel htmlFor="sprint-start">Início (opcional)</FieldLabel>
-                <Input
+                <DateField
                   id="sprint-start"
                   name="startDate"
-                  type="date"
+                  label="Início"
                   defaultValue={sprint?.startDate?.slice(0, 10)}
-                  aria-invalid={!!errors.startDate}
+                  invalid={!!errors.startDate}
                 />
                 <FieldError>{errors.startDate}</FieldError>
               </Field>
               <Field data-invalid={!!errors.endDate}>
                 <FieldLabel htmlFor="sprint-end">Fim (opcional)</FieldLabel>
-                <Input
+                <DateField
                   id="sprint-end"
                   name="endDate"
-                  type="date"
+                  label="Fim"
                   defaultValue={sprint?.endDate?.slice(0, 10)}
-                  aria-invalid={!!errors.endDate}
+                  invalid={!!errors.endDate}
                 />
                 <FieldError>{errors.endDate}</FieldError>
               </Field>

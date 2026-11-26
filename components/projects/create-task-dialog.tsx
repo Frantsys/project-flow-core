@@ -1,5 +1,6 @@
 "use client";
 
+import { DateField } from "@/components/date-field";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -182,7 +183,13 @@ export function CreateTaskDialog({
               </Field>
               <Field data-invalid={!!errors.dueDate}>
                 <FieldLabel htmlFor="task-due">Prazo (opcional)</FieldLabel>
-                <Input id="task-due" name="dueDate" type="date" aria-invalid={!!errors.dueDate} />
+                <DateField
+                  id="task-due"
+                  name="dueDate"
+                  label="Prazo"
+                  placeholder="Sem prazo"
+                  invalid={!!errors.dueDate}
+                />
                 <FieldError>{errors.dueDate}</FieldError>
               </Field>
             </div>

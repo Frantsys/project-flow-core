@@ -88,7 +88,16 @@ test("roteiro completo de um time novo", async ({ page }) => {
     await expect(page.getByText("Começo pelo layout amanhã.")).toBeVisible();
     await expect(comment).toHaveValue("");
     await expectAccessible(page, "tarefa");
+
+    // prazo pelo calendário em português: o dia em foco ao abrir é hoje, e Enter o escolhe
+    await page.getByRole("button", { name: "Prazo: Sem prazo" }).click();
+    await expectAccessible(page, "calendário do prazo");
+    await page.keyboard.press("Enter");
+    const today = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo" }).format(new Date());
+    await expect(page.getByRole("button", { name: `Prazo: ${today}` })).toBeVisible();
     await page.goto(page.url().replace(/\/tasks\/PC-1$/, ""));
+    // e o card do quadro mostra o prazo salvo
+    await expect(page.getByRole("region", { name: /A Fazer/ }).getByText("hoje")).toBeVisible();
   });
 
   await test.step("mover pelo menu (alternativa de teclado ao arraste)", async () => {
