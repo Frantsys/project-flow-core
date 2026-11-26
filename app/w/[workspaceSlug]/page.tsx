@@ -7,7 +7,7 @@ import { getWorkspace, requireUser } from "@/lib/session";
 import { getProjectsByWorkspaceSlug } from "@/server/services/project.service";
 import { getWorkspaceHistory } from "@/server/services/history.service";
 import { HistoryList } from "@/components/history-list";
-import { roleLabel } from "@/lib/labels";
+import { roleLabel, todayInBrazil } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,6 +32,7 @@ import {
 import { UserAvatar } from "@/components/user-avatar";
 import { CreateProjectDialog } from "@/components/projects/create-project-dialog";
 import { OnboardingChecklist } from "@/components/workspaces/onboarding-checklist";
+import { NowSection } from "@/components/workspaces/now-section";
 import { getOnboarding } from "@/server/services/onboarding.service";
 
 export default function WorkspaceOverviewPage({ params }: PageProps<"/w/[workspaceSlug]">) {
@@ -84,6 +85,17 @@ async function Overview({ params }: { params: Promise<{ workspaceSlug: string }>
       </div>
 
       {onboarding && <OnboardingChecklist steps={onboarding} workspaceSlug={workspace.slug} />}
+
+      {projects.length > 0 && (
+        <Suspense fallback={<Skeleton className="h-44 rounded-xl" />}>
+          <NowSection
+            workspaceSlug={workspace.slug}
+            projects={projects}
+            userId={user.id}
+            today={todayInBrazil()}
+          />
+        </Suspense>
+      )}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-base font-semibold">Projetos</h2>
