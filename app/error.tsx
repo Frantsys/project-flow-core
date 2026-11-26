@@ -16,10 +16,10 @@ import {
 /** Erro inesperado em qualquer página: mantém o layout e oferece tentar de novo. */
 export default function ErrorPage({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   useEffect(() => console.error(error), [error]);
 
@@ -37,7 +37,7 @@ export default function ErrorPage({
           </EmptyDescription>
         </EmptyHeader>
         <EmptyContent className="flex-row justify-center">
-          <Button onClick={reset}>Tentar de novo</Button>
+          <Button onClick={() => retry()}>Tentar de novo</Button>
           <Button asChild variant="outline">
             <Link href="/workspaces">Ir para os workspaces</Link>
           </Button>

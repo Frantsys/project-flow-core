@@ -1,4 +1,5 @@
 import { Suspense, ViewTransition } from "react";
+import { StoreHydration } from "@/components/store-hydration";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
@@ -68,6 +69,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <CommandMenu />
           </Suspense>
           <Toaster />
+          <StoreHydration />
           {/* sem cookies e sem identificar a pessoa; só coletam na Vercel, com o recurso ligado no painel */}
           <Analytics />
           <SpeedInsights />

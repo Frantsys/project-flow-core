@@ -31,6 +31,13 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // fotos de perfil do Google e do GitHub, servidas pelo otimizador de imagens (next/image)
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "**.googleusercontent.com" },
+      { protocol: "https", hostname: "avatars.githubusercontent.com" },
+    ],
+  },
   experimental: {
     agentFeedback: true,
   },

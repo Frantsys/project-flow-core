@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { useUiStore } from "@/store/ui-store";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -620,33 +621,12 @@ export function AddColumn({ projectId, statuses }: { projectId: string; statuses
   );
 }
 
-const COLLAPSE_EVENT = "pf:collapsed-columns";
-const collapseKey = (projectId: string) => `pf-collapsed-${projectId}`;
+const NONE: string[] = [];
 
-/**
- * Colunas recolhidas deste projeto, guardadas no navegador da pessoa. No servidor (e na primeira
- * renderização) nenhuma está recolhida, para a hidratação bater.
- */
+/** Colunas recolhidas deste projeto (store/ui-store.ts, guardadas no navegador da pessoa). */
 export function useCollapsedColumns(projectId: string) {
-  const raw = useSyncExternalStore(
-    (notify) => {
-      window.addEventListener(COLLAPSE_EVENT, notify);
-      window.addEventListener("storage", notify);
-      return () => {
-        window.removeEventListener(COLLAPSE_EVENT, notify);
-        window.removeEventListener("storage", notify);
-      };
-    },
-    () => localStorage.getItem(collapseKey(projectId)) ?? "[]",
-    () => "[]"
-  );
-  const collapsed = useMemo(() => new Set<string>(JSON.parse(raw) as string[]), [raw]);
-  const toggle = (id: string) => {
-    const next = new Set(collapsed);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    localStorage.setItem(collapseKey(projectId), JSON.stringify([...next]));
-    window.dispatchEvent(new Event(COLLAPSE_EVENT));
-  };
-  return { collapsed, toggle };
+  const ids = useUiStore((s) => s.collapsedColumns[projectId] ?? NONE);
+  const toggleColumn = useUiStore((s) => s.toggleColumn);
+  const collapsed = useMemo(() => new Set(ids), [ids]);
+  return { collapsed, toggle: (id: string) => toggleColumn(projectId, id) };
 }

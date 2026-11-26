@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { toast } from "sonner";
@@ -88,8 +89,9 @@ export function TwoFactorCard({
             <li>Digite o código de 6 dígitos que aparecer.</li>
           </ol>
           <div className="flex flex-wrap items-center gap-5">
-            {/* eslint-disable-next-line @next/next/no-img-element -- data URL gerada no servidor */}
-            <img
+            {/* data URL gerada no servidor: sem otimização (já vem no tamanho certo) */}
+            <Image
+              unoptimized
               src={stage.qr}
               alt="QR code para o aplicativo autenticador"
               width={180}

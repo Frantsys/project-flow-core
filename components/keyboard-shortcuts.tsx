@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { NAV } from "@/lib/navigation";
 import { usePathname, useRouter } from "next/navigation";
-import { isTyping, SHORTCUTS_EVENT } from "./command-menu";
-import { MY_WORK_EVENT } from "./my-work-panel";
+import { isTyping } from "./command-menu";
+import { useUiStore } from "@/store/ui-store";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 /** G e depois a letra: vai para a tela. As do projeto só valem dentro de um projeto. */
-const toggleMyWork = () => window.dispatchEvent(new Event(MY_WORK_EVENT));
+const toggleMyWork = () => useUiStore.getState().togglePanel("myWork");
 
 const GO: {
   key: string;
@@ -65,7 +65,9 @@ const visible = (selector: string) =>
 export function KeyboardShortcuts() {
   const router = useRouter();
   const pathname = usePathname();
-  const [help, setHelp] = useState(false);
+  const help = useUiStore((s) => s.panel === "shortcuts");
+  const setPanelOpen = useUiStore((s) => s.setPanelOpen);
+  const setHelp = (open: boolean) => setPanelOpen("shortcuts", open);
   const pendingG = useRef(0);
 
   useEffect(() => {
@@ -98,7 +100,7 @@ export function KeyboardShortcuts() {
         pendingG.current = Date.now();
       } else if (e.key === "?") {
         e.preventDefault();
-        setHelp(true);
+        useUiStore.getState().openPanel("shortcuts");
       } else if (key === "c") {
         // o próprio botão da tela (a ação certa para onde a pessoa está)
         const button = visible('[data-shortcut="c"]');
@@ -108,13 +110,8 @@ export function KeyboardShortcuts() {
         }
       }
     };
-    const onOpen = () => setHelp(true);
     window.addEventListener("keydown", onKey);
-    window.addEventListener(SHORTCUTS_EVENT, onOpen);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener(SHORTCUTS_EVENT, onOpen);
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [pathname, router]);
 
   return (

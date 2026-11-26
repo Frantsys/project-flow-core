@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useUiStore } from "@/store/ui-store";
 import { NAV } from "@/lib/navigation";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -38,12 +39,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 
-const OPEN_EVENT = "project-flow:open-command-menu";
-
 /** Abre a paleta de qualquer lugar (botões de busca). */
-export const openCommandMenu = () => window.dispatchEvent(new Event(OPEN_EVENT));
-export const SHORTCUTS_EVENT = "pf:open-shortcuts";
-const openShortcuts = () => window.dispatchEvent(new Event(SHORTCUTS_EVENT));
+export const openCommandMenu = () => useUiStore.getState().openPanel("commandMenu");
+const openShortcuts = () => useUiStore.getState().openPanel("shortcuts");
 
 const KIND = {
   task: { label: "Tarefas", icon: SquareCheck },
@@ -63,7 +61,10 @@ export function CommandMenu() {
   const router = useRouter();
   const pathname = usePathname();
   const { setTheme } = useTheme();
-  const [open, setOpen] = useState(false);
+  const open = useUiStore((s) => s.panel === "commandMenu");
+  const setPanelOpen = useUiStore((s) => s.setPanelOpen);
+  const togglePanel = useUiStore((s) => s.togglePanel);
+  const setOpen = (next: boolean) => setPanelOpen("commandMenu", next);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResultDTO[]>([]);
   const [loading, setLoading] = useState(false);
@@ -79,17 +80,12 @@ export function CommandMenu() {
         (e.key === "/" && !isTyping(e.target))
       ) {
         e.preventDefault();
-        setOpen((o) => !o);
+        togglePanel("commandMenu");
       }
     };
-    const onOpen = () => setOpen(true);
     window.addEventListener("keydown", onKey);
-    window.addEventListener(OPEN_EVENT, onOpen);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener(OPEN_EVENT, onOpen);
-    };
-  }, [disabled]);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [disabled, togglePanel]);
 
   // busca no servidor depois de uma pausa na digitação; descarta respostas antigas
   useEffect(() => {

@@ -1,4 +1,5 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Image from "next/image";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { initials } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
@@ -17,10 +18,20 @@ export function UserAvatar({
 }) {
   return (
     <Avatar className={cn(SIZES[size], className)} title={name}>
-      {image ? <AvatarImage src={image} alt="" /> : null}
+      {/* iniciais por baixo: aparecem enquanto a foto carrega ou se ela falhar */}
       <AvatarFallback className="bg-avatar font-semibold text-badge-foreground">
         {initials(name)}
       </AvatarFallback>
+      {image && (
+        // next/image: a foto do Google/GitHub chega redimensionada (64 px, nítida em tela 2x) e em WebP/AVIF
+        <Image
+          src={image}
+          alt=""
+          width={64}
+          height={64}
+          className="absolute inset-0 size-full rounded-full object-cover"
+        />
+      )}
     </Avatar>
   );
 }

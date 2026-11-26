@@ -64,6 +64,7 @@ workspace de exemplo sem cadastro (só leitura).
 | Autenticação | NextAuth (credenciais, Google, GitHub) com adapter MongoDB                     |
 | Dados        | MongoDB Atlas + Mongoose 9                                                     |
 | Validação    | zod (mesmos schemas no cliente e no servidor)                                  |
+| Estado de UI | Zustand (`store/`): painel aberto, colunas recolhidas; dados ficam no servidor |
 | E-mail       | Resend (API HTTP), com fallback para o terminal em desenvolvimento             |
 | Testes       | Vitest + MongoDB em memória (replica set)                                      |
 | Hospedagem   | Vercel (funções em São Paulo, `gru1`), ao lado do cluster Atlas em `sa-east-1` |
@@ -85,12 +86,15 @@ flowchart LR
 - **Leituras:** Server Components chamam os services, sempre atrás de `<Suspense>` (a sessão é dado da requisição).
 - **Mutações:** Server Actions criadas com `createAction` (ver [ADR 006](docs/adrs/006-uso-de-server-actions.md)).
 - **Toda mutação relevante** grava uma entrada no histórico do workspace.
+- **Carregamento e erro:** `loading.tsx` e `error.tsx` nas rotas do workspace, do projeto e das telas
+  da conta, além dos esqueletos em `<Suspense>` dentro das páginas.
 - **Exclusões em cascata** (workspace, projeto, documento com subdocumentos) rodam em transação.
 
 ```
 app/                 rotas (auth, workspaces, w/[workspaceSlug]/…)
 components/          componentes de tela; components/ui são os do shadcn
 lib/                 sessão, rótulos em pt-BR, formatação, helpers puros
+store/               estado só do cliente (Zustand)
 server/actions/      Server Actions (mutações)
 server/services/     leituras e regras compartilhadas
 server/lib/          createAction e checagem de papéis

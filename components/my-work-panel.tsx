@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useUiStore } from "@/store/ui-store";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowRight, ListChecks, PartyPopper, X } from "lucide-react";
@@ -14,8 +15,6 @@ import { SidebarMenuBadge, SidebarMenuButton, useSidebar } from "@/components/ui
 import { Spinner } from "@/components/ui/spinner";
 import { TaskTypeIndicator } from "@/components/projects/task-type";
 
-export const MY_WORK_EVENT = "pf:toggle-my-work";
-
 /**
  * Minhas tarefas num painel por cima da página, aberto pela barra lateral (ou G M): a pessoa vê o
  * que está com ela sem sair do quadro. Começa no workspace atual; a página /my-work continua para a
@@ -24,7 +23,9 @@ export const MY_WORK_EVENT = "pf:toggle-my-work";
 export function MyWorkPanel({ workspaceSlug }: { workspaceSlug: string }) {
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
-  const [open, setOpen] = useState(false);
+  const open = useUiStore((s) => s.panel === "myWork");
+  const setPanelOpen = useUiStore((s) => s.setPanelOpen);
+  const setOpen = (next: boolean) => setPanelOpen("myWork", next);
   const [scope, setScope] = useState<"here" | "all">("here");
   const [data, setData] = useState<{ tasks: MyTaskDTO[]; today: string } | null>(null);
 
@@ -43,12 +44,6 @@ export function MyWorkPanel({ workspaceSlug }: { workspaceSlug: string }) {
       alive = false;
     };
   }, [pathname]);
-
-  useEffect(() => {
-    const toggle = () => setOpen((o) => !o);
-    window.addEventListener(MY_WORK_EVENT, toggle);
-    return () => window.removeEventListener(MY_WORK_EVENT, toggle);
-  }, []);
 
   function onOpenChange(next: boolean) {
     setOpen(next);
