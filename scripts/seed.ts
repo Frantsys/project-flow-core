@@ -3,11 +3,14 @@
  *
  *   npm run seed            (usa .env.local: MONGODB_URI, MONGODB_DB e SEED_PASSWORD)
  *   npm run seed -- --public-demo   (demonstração pública, inclusive em produção)
+ *   npm run seed -- --testers       (contas de teste com senha, inclusive em produção)
  *
  * Apaga e recria só os dados do workspace "acme-labs-demo" e das contas @demo.projectflow.dev;
  * o resto do banco fica intocado. Sem --public-demo, recusa o banco de produção.
  * Com --public-demo a conta demo não tem senha (entra pelo botão "Ver demonstração", em modo só
  * leitura) e ninguém recebe e-mail: os endereços @demo.projectflow.dev não são nossos.
+ * Com --testers o workspace é "time-de-teste" e as contas @teste.projectflow.dev: todas entram com
+ * SEED_PASSWORD, como usuários comuns (podem editar e usar a IA), sem mexer na demonstração pública.
  */
 import bcrypt from "bcryptjs";
 import mongoose, { Types } from "mongoose";
@@ -26,13 +29,19 @@ import {
 import { backfillRanks } from "@/server/lib/rank";
 
 const PRODUCTION_DB = "project-flow";
-const SLUG = "acme-labs-demo";
-const DOMAIN = "demo.projectflow.dev";
 const DAY = 86_400_000;
 
 const PUBLIC_DEMO = process.argv.includes("--public-demo");
+const TESTERS = process.argv.includes("--testers");
+const SLUG = TESTERS ? "time-de-teste" : "acme-labs-demo";
+const DOMAIN = TESTERS ? "teste.projectflow.dev" : "demo.projectflow.dev";
+const WORKSPACE_NAME = TESTERS ? "Time de Teste" : "Acme Labs";
 
-if (!PUBLIC_DEMO && (!process.env.MONGODB_DB || DB_NAME === PRODUCTION_DB)) {
+if (PUBLIC_DEMO && TESTERS) {
+  console.error("Use --public-demo ou --testers, não os dois.");
+  process.exit(1);
+}
+if (!PUBLIC_DEMO && !TESTERS && (!process.env.MONGODB_DB || DB_NAME === PRODUCTION_DB)) {
   console.error(
     `Seed recusado: defina MONGODB_DB com um banco que não seja "${PRODUCTION_DB}" (ex.: project-flow-dev).`
   );
@@ -44,7 +53,7 @@ if (!PUBLIC_DEMO && (!process.env.SEED_PASSWORD || process.env.SEED_PASSWORD.len
 }
 
 const people = [
-  { key: "demo", username: "Conta Demo" },
+  { key: "demo", username: TESTERS ? "Conta Teste" : "Conta Demo" },
   { key: "marina", username: "Marina Souza" },
   { key: "joao", username: "João Pereira" },
   { key: "lia", username: "Lia Ramos" },
@@ -145,8 +154,8 @@ async function main() {
         const user = await User.create({
           username: p.username,
           email: `${p.key}@${DOMAIN}`,
-          // só a conta demo entra com senha; as outras existem para aparecer como membros
-          ...(p.key === "demo" && passwordHash ? { passwordHash } : {}),
+          // só a conta demo entra com senha (nos testes, todas); as outras aparecem como membros
+          ...((TESTERS || p.key === "demo") && passwordHash ? { passwordHash } : {}),
           emailVerified: new Date(),
           notifyByEmail: false,
         });
@@ -158,7 +167,7 @@ async function main() {
 
   const now = Date.now();
   const ws = await Workspace.create({
-    name: "Acme Labs",
+    name: WORKSPACE_NAME,
     slug: SLUG,
     ownerId: users.demo,
     members: [
@@ -284,7 +293,7 @@ async function main() {
     projectId: pf!._id,
     workspaceId: ws._id,
     authorId: users.marina,
-    content: "@Conta Demo consegue revisar o texto do estado vazio antes da daily?",
+    content: `@${people[0].username} consegue revisar o texto do estado vazio antes da daily?`,
     mentions: [users.demo],
   });
   await Task.updateOne({ _id: assigned!._id }, { $set: { assigneeId: users.demo } });
@@ -316,8 +325,7 @@ async function main() {
     workspaceId: ws._id,
     authorId: users.demo,
     title: "Guia de onboarding",
-    content:
-      '# Bem-vindo à Acme Labs\n\n- Leia os processos do time\n- Peça acesso aos projetos\n- Escolha uma tarefa marcada como "bom primeiro passo"',
+    content: `# Bem-vindo à ${WORKSPACE_NAME}\n\n- Leia os processos do time\n- Peça acesso aos projetos\n- Escolha uma tarefa marcada como "bom primeiro passo"`,
   });
   await DocumentModel.create({
     workspaceId: ws._id,
@@ -332,7 +340,9 @@ async function main() {
   console.log(
     PUBLIC_DEMO
       ? `Demonstração pública: defina DEMO_USER_EMAIL=demo@${DOMAIN} no ambiente do app.`
-      : `Entre com demo@${DOMAIN} e a senha definida em SEED_PASSWORD.`
+      : TESTERS
+        ? `Entre com ${people.map((p) => `${p.key}@${DOMAIN}`).join(", ")} e a senha de SEED_PASSWORD.`
+        : `Entre com demo@${DOMAIN} e a senha definida em SEED_PASSWORD.`
   );
 }
 
