@@ -79,6 +79,7 @@ export interface TaskDTO {
   priority: TaskPriority;
   storyPoints: number | null;
   dueDate: string | null;
+  tags: string[];
   sprint: {
     id: string;
     name: string;
@@ -148,7 +149,8 @@ export interface HistoryEntryDTO {
 
 export interface TaskDetailDTO extends TaskDTO {
   description: string;
-  tags: string[];
+  /** Etiquetas já usadas no projeto, para sugerir ao digitar. */
+  projectTags: string[];
   aiSummary: string | null;
   reporter: PersonDTO | null;
   subtasks: SubtaskDTO[];
@@ -169,4 +171,15 @@ export interface DocumentSummaryDTO {
 export interface DocumentDTO extends DocumentSummaryDTO {
   content: string;
   author: PersonDTO | null;
+}
+
+export interface TrashItemDTO {
+  id: string;
+  kind: "TASK" | "DOCUMENT";
+  title: string;
+  deletedBy: string | null;
+  deletedAt: string;
+  /** Quando o índice TTL apaga de vez. */
+  expiresAt: string;
+  canRestore: boolean;
 }

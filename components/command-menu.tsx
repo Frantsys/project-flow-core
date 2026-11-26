@@ -17,6 +17,8 @@ import {
   Sun,
   SquareCheck,
   UserRound,
+  Keyboard,
+  Trash2,
 } from "lucide-react";
 import { searchAction } from "@/server/actions/search.actions";
 import { normalizeText } from "@/lib/task-filters";
@@ -39,6 +41,8 @@ const OPEN_EVENT = "project-flow:open-command-menu";
 
 /** Abre a paleta de qualquer lugar (botões de busca). */
 export const openCommandMenu = () => window.dispatchEvent(new Event(OPEN_EVENT));
+export const SHORTCUTS_EVENT = "pf:open-shortcuts";
+const openShortcuts = () => window.dispatchEvent(new Event(SHORTCUTS_EVENT));
 
 const KIND = {
   task: { label: "Tarefas", icon: SquareCheck },
@@ -47,7 +51,7 @@ const KIND = {
   workspace: { label: "Workspaces", icon: Building2 },
 } as const;
 
-const isTyping = (el: EventTarget | null) =>
+export const isTyping = (el: EventTarget | null) =>
   el instanceof HTMLElement && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName));
 
 /**
@@ -126,6 +130,8 @@ export function CommandMenu() {
             icon: SlidersHorizontal,
             action: () => go(`${base}/settings`),
           },
+          { label: "Lixeira", icon: Trash2, action: () => go(`${base}/trash`) },
+          { label: "Atalhos de teclado", icon: Keyboard, action: () => run(openShortcuts) },
         ]
       : []),
     { label: "Minhas tarefas", icon: ListChecks, action: () => go("/my-work") },

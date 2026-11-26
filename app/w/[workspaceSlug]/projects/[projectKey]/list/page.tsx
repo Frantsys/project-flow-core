@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { getWorkspace, requireUser } from "@/lib/session";
 import { getProjectByKey } from "@/server/services/project.service";
-import { filterTasks, parseTaskFilters } from "@/lib/task-filters";
+import { collectTags, filterTasks, parseTaskFilters } from "@/lib/task-filters";
 import { fullDate, priorityBadge, todayInBrazil } from "@/lib/labels";
 import type { TaskDTO } from "@/server/db/types";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import { ProjectHeader } from "@/components/projects/project-header";
 import { TaskFilterBar } from "@/components/projects/task-filter-bar";
 import { TaskTypeIndicator } from "@/components/projects/task-type";
 import { UserAvatar } from "@/components/user-avatar";
+import { TagChip } from "@/components/tasks/task-tags";
 
 type Query = Promise<Record<string, string | string[] | undefined>>;
 
@@ -108,7 +109,7 @@ async function TaskList({
   return (
     <div className="flex min-w-0 flex-col gap-5 p-6 md:p-8">
       <ProjectHeader workspace={workspace} project={project} view="list" />
-      <TaskFilterBar members={workspace.members} />
+      <TaskFilterBar members={workspace.members} tags={collectTags(project.tasks)} />
       <Card className="gap-0 overflow-hidden py-0">
         <div className="overflow-x-auto">
           <Table>
@@ -163,6 +164,13 @@ async function TaskList({
                       >
                         {t.title}
                       </Link>
+                      {t.tags.length > 0 && (
+                        <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
+                          {t.tags.map((tag) => (
+                            <TagChip key={tag} tag={tag} />
+                          ))}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{statusName.get(t.statusId)}</Badge>

@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { Types } from "mongoose";
 import dbConnect from "@/lib/db";
-import { Comment, Notification, Project, Sprint, Task, User, Workspace } from "../db/models";
+import { Comment, Project, Sprint, Task, User, Workspace } from "../db/models";
 import { parseMentions } from "@/lib/mentions";
 import { notify } from "../services/notification.service";
+import { trashTask } from "../services/trash.service";
 import { createAction, fail } from "../lib/action";
 import { can } from "@/lib/permissions";
 import { requirePermission } from "../lib/access";
@@ -50,6 +51,7 @@ interface TaskLean {
   priority: string;
   storyPoints?: number | null;
   dueDate?: Date | null;
+  tags?: string[];
   assigneeId?: Types.ObjectId | null;
   sprintId?: Types.ObjectId | null;
   subtasks: { _id: Types.ObjectId; title: string; isCompleted: boolean; order: number }[];
@@ -239,6 +241,15 @@ export const updateTaskAction = createAction({
       }
     }
 
+    if (data.tags !== undefined) {
+      const old = (task.tags ?? []).join(", ");
+      const next = data.tags.join(", ");
+      if (old !== next) {
+        set.tags = data.tags;
+        changes.push({ field: "tags", oldValue: old || null, newValue: next || null });
+      }
+    }
+
     if (data.assigneeId !== undefined) {
       const oldId = task.assigneeId?.toString() ?? null;
       if (oldId !== data.assigneeId) {
@@ -340,23 +351,24 @@ export const moveTaskAction = createAction({
   },
 });
 
-/** Exclui a tarefa. Membros comuns só excluem tarefas que eles mesmos criaram. */
+/**
+ * Manda a tarefa para a lixeira (restaurável por 30 dias). Membros comuns só excluem tarefas que
+ * eles mesmos criaram. Devolve o id do item da lixeira para o "Desfazer".
+ */
 export const deleteTaskAction = createAction({
   name: "task.delete",
   schema: taskIdSchema,
   handler: async ({ taskId }, { userId }) => {
-    const { task, role, history } = await loadTask(taskId, userId);
+    const { task, project, role, history } = await loadTask(taskId, userId);
     if (!can(role, "task.deleteAny") && task.reporterId.toString() !== userId) {
       fail("Só quem criou a tarefa, um admin ou o dono pode excluí-la.");
     }
 
-    await Task.deleteOne({ _id: task._id });
-    await Comment.deleteMany({ taskId: task._id });
-    await Notification.deleteMany({ taskId: task._id });
+    const trashId = await trashTask(task, project.workspaceId, userId);
     await history("DELETE", "TASK", {});
 
     revalidateProjectPages();
-    return { id: taskId };
+    return { id: taskId, trashId };
   },
 });
 
@@ -577,7 +589,7 @@ export const deleteCommentAction = createAction({
   name: "task.deleteComment",
   schema: commentRefSchema,
   handler: async ({ taskId, commentId }, { userId }) => {
-    const { task, role, history } = await loadTask(taskId, userId);
+    const { task, project, role, history } = await loadTask(taskId, userId);
 
     const comment = await Comment.findOne({ _id: commentId, taskId: task._id }).select("authorId").lean();
     if (!comment) fail("Comentário não encontrado.");

@@ -27,6 +27,7 @@ const task = (over: Partial<TaskDTO>): TaskDTO => ({
   priority: "MEDIUM",
   storyPoints: null,
   dueDate: null,
+  tags: [],
   sprint: null,
   assignee: null,
   ...over,

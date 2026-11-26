@@ -1,5 +1,5 @@
 import { can } from "@/lib/permissions";
-import { filterTasks, parseTaskFilters } from "@/lib/task-filters";
+import { collectTags, filterTasks, parseTaskFilters } from "@/lib/task-filters";
 import { TaskFilterBar } from "@/components/projects/task-filter-bar";
 import { Suspense } from "react";
 import Link from "next/link";
@@ -128,7 +128,7 @@ async function Backlog({
               projectId={project.id}
               statuses={project.statuses}
               trigger={
-                <Button>
+                <Button data-shortcut="c" aria-keyshortcuts="C" title="Nova tarefa (C)">
                   <Plus aria-hidden="true" />
                   Nova tarefa
                 </Button>
@@ -138,7 +138,7 @@ async function Backlog({
         }
       />
 
-      <TaskFilterBar members={workspace.members} />
+      <TaskFilterBar members={workspace.members} tags={collectTags(project.tasks)} />
 
       {open.map(section)}
       {section(null)}

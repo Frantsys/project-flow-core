@@ -633,19 +633,19 @@ Tudo que o plano previa e ainda não existe, agrupado pelo que destrava cada ite
 **Domínio**
 
 - Épicos e relações entre tarefas (bloqueia, duplica) (3.3).
-- Etiquetas por workspace, com cor e filtro (3.5).
+- Renomear uma etiqueta em todas as tarefas de uma vez (as etiquetas de 3.5 já existem, por tarefa).
 - Ao remover um membro, oferecer reatribuir as tarefas dele (3.6).
 - Proteção contra sobrescrita também na descrição da tarefa (3.7).
 - Paginação do histórico e revisão de índices (3.8); slug do workspace editável (3.9).
 
 **Produto e interface**
 
-- Atalhos de teclado além de Ctrl K e `/` (C, G B, J/K, `?`) (4.4).
+- Atalhos J/K para andar entre os cards (4.4; os outros atalhos já existem).
 - Visões salvas e agrupamento por responsável no quadro (4.2).
 - Depois do login, ir para Minhas tarefas ou o último workspace (4.5).
 - Roadmap de épicos (4.6), burndown e fluxo cumulativo (4.7, depende dos jobs agendados).
 - Editor rico, versões e mover documentos na árvore (4.8); modelos de projeto (4.9).
-- Lixeira com restauração por 30 dias e "Desfazer" no aviso (6.2, 6.3).
+- Lixeira também para projetos inteiros (tarefas e documentos já vão para a lixeira, 6.3).
 - Formulários com react-hook-form e atualização otimista fora do quadro (6.1, 6.2).
 - Quadro no celular em abas por coluna e tabelas virando cartões (6.7).
 - Auditoria de acessibilidade com axe em todas as telas (6.8); inglês (6.9).
@@ -667,4 +667,5 @@ Tudo que o plano previa e ainda não existe, agrupado pelo que destrava cada ite
    "Sair de todos os dispositivos" encerram todas as sessões abertas.
 3. ~~Resend e Anthropic~~ **feito**: `RESEND_API_KEY` e, no lugar da Anthropic, `GEMINI_API_KEY` (a IA
    aceita os dois provedores). Falta um domínio verificado e `EMAIL_FROM` para e-mail a qualquer pessoa.
-4. **Etiquetas, lixeira e atalhos.** São os itens de produto mais visíveis para quem usa todo dia.
+4. ~~Etiquetas, lixeira e atalhos~~ **feito**: etiquetas com cor e filtro; tarefas e documentos
+   excluídos vão para a Lixeira por 30 dias, com "Desfazer" no aviso; atalhos C, G + letra e `?`.

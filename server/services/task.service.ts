@@ -73,13 +73,14 @@ export async function getTaskDetail(
     .lean<TaskDetailLean>();
   if (!task) return null;
 
-  const [history, comments] = await Promise.all([
+  const [history, comments, projectTags] = await Promise.all([
     findHistory({ targetId: task._id }, 30),
     Comment.find({ taskId: task._id })
       .sort({ createdAt: 1 })
       .limit(200)
       .populate<{ authorId: PersonLean | null }>("authorId", "username image")
       .lean(),
+    Task.distinct("tags", { projectId: project._id }) as Promise<string[]>,
   ]);
 
   return {
@@ -94,6 +95,7 @@ export async function getTaskDetail(
     storyPoints: task.storyPoints ?? null,
     dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,
     tags: task.tags ?? [],
+    projectTags: projectTags.sort((a, b) => a.localeCompare(b, "pt-BR")),
     aiSummary: task.aiSummary ?? null,
     sprint: task.sprintId ? { id: task.sprintId._id.toString(), name: task.sprintId.name } : null,
     assignee: person(task.assigneeId),

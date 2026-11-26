@@ -11,6 +11,7 @@ const FIELD: Record<string, string> = {
   dueDate: "o prazo",
   assignee: "o responsável",
   sprint: "a sprint",
+  tags: "as etiquetas",
 };
 
 /** Mostra o valor gravado no histórico como a interface mostra (Média em vez de MEDIUM). */
@@ -37,6 +38,7 @@ export function describeHistory(entry: HistoryEntryDTO): string {
     case "TASK":
       if (action === "CREATE") return "criou a tarefa";
       if (action === "DELETE") return "excluiu a tarefa";
+      if (field === "restored") return "restaurou da lixeira a tarefa";
       if (field === "description") return "editou a descrição de";
       if (field && FIELD[field]) {
         return `alterou ${FIELD[field]} de ${value(field, oldValue)} para ${value(field, newValue)} em`;
@@ -55,6 +57,7 @@ export function describeHistory(entry: HistoryEntryDTO): string {
     case "DOCUMENT":
       if (action === "CREATE") return "criou o documento";
       if (action === "DELETE") return "excluiu o documento";
+      if (field === "restored") return "restaurou da lixeira o documento";
       return field === "title" ? `renomeou “${oldValue}” para` : "editou o documento";
     case "PROJECT":
       if (action === "CREATE") return "criou o projeto";

@@ -15,10 +15,17 @@ const PRIORITIES: TaskPriority[] = ["URGENT", "HIGH", "MEDIUM", "LOW"];
 const TYPES: TaskType[] = ["TASK", "BUG", "STORY"];
 
 /**
- * Barra de filtros; o estado fica na URL (?q=&assignee=&priority=&type=).
+ * Barra de filtros; o estado fica na URL (?q=&assignee=&priority=&type=&tag=).
  * No celular só a busca fica à vista; os outros filtros abrem no botão "Filtros", que conta os ativos.
  */
-export function TaskFilterBar({ members }: { members: Pick<WorkspaceMemberDTO, "id" | "name">[] }) {
+export function TaskFilterBar({
+  members,
+  tags = [],
+}: {
+  members: Pick<WorkspaceMemberDTO, "id" | "name">[];
+  /** Etiquetas usadas no projeto; sem nenhuma, o filtro de etiqueta não aparece. */
+  tags?: string[];
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -26,7 +33,7 @@ export function TaskFilterBar({ members }: { members: Pick<WorkspaceMemberDTO, "
   const [q, setQ] = useState(filters.q);
   const [open, setOpen] = useState(false);
   const panelId = useId();
-  const active = [filters.assignee, filters.priority, filters.type].filter(Boolean).length;
+  const active = [filters.assignee, filters.priority, filters.type, filters.tag].filter(Boolean).length;
 
   function set(key: string, value: string | null) {
     const next = new URLSearchParams(params);
@@ -118,6 +125,22 @@ export function TaskFilterBar({ members }: { members: Pick<WorkspaceMemberDTO, "
             ))}
           </SelectContent>
         </Select>
+        {(tags.length > 0 || filters.tag) && (
+          <Select value={filters.tag ?? ALL} onValueChange={(v) => set("tag", v)}>
+            <SelectTrigger aria-label="Etiqueta" className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>Toda etiqueta</SelectItem>
+              {/* etiqueta vinda do link que já não está em nenhuma tarefa continua selecionável */}
+              {(filters.tag && !tags.includes(filters.tag) ? [filters.tag, ...tags] : tags).map((t) => (
+                <SelectItem key={t} value={t}>
+                  {t}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
       {hasFilters(filters) && (
         <Button

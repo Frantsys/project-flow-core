@@ -523,3 +523,43 @@ const ApiTokenSchema = new Schema<IApiToken>(
 
 export const ApiToken: Model<IApiToken> =
   mongoose.models.ApiToken || mongoose.model<IApiToken>("ApiToken", ApiTokenSchema);
+
+export const TRASH_DAYS = 30;
+
+/**
+ * Item da lixeira: a tarefa (com os comentários) ou o documento (com a subárvore) inteiros, como
+ * estavam ao excluir. Restaurar devolve os documentos originais; o índice TTL apaga de vez em 30 dias.
+ * Guardar à parte, em vez de marcar `deletedAt`, deixa todas as outras consultas como estão.
+ */
+export interface ITrashItem {
+  _id: Types.ObjectId;
+  workspaceId: Types.ObjectId;
+  projectId: Types.ObjectId | null;
+  kind: "TASK" | "DOCUMENT";
+  /** Como aparece na lista: "PF-12 Corrigir login" ou o título do documento. */
+  title: string;
+  deletedBy: Types.ObjectId;
+  /** TASK: [tarefa]; DOCUMENT: o documento excluído primeiro, depois os subdocumentos. */
+  items: unknown[];
+  comments: unknown[];
+  createdAt: Date;
+}
+
+const TrashItemSchema = new Schema<ITrashItem>(
+  {
+    workspaceId: { type: Schema.Types.ObjectId, ref: "Workspace", required: true },
+    projectId: { type: Schema.Types.ObjectId, ref: "Project", default: null, index: true },
+    kind: { type: String, enum: ["TASK", "DOCUMENT"], required: true },
+    title: { type: String, required: true },
+    deletedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    items: { type: Array, default: [] },
+    comments: { type: Array, default: [] },
+  },
+  { timestamps: { createdAt: true, updatedAt: false }, versionKey: false }
+);
+
+TrashItemSchema.index({ workspaceId: 1, createdAt: -1 });
+TrashItemSchema.index({ createdAt: 1 }, { expireAfterSeconds: TRASH_DAYS * 24 * 3600 });
+
+export const TrashItem: Model<ITrashItem> =
+  mongoose.models.TrashItem || mongoose.model<ITrashItem>("TrashItem", TrashItemSchema);

@@ -9,6 +9,7 @@ import {
   Project,
   Sprint,
   Task,
+  TrashItem,
   Workspace,
   WorkspaceRole,
 } from "../db/models";
@@ -250,6 +251,7 @@ export async function deleteWorkspace(
       await ApiToken.deleteMany({ workspaceId }, { session });
       await Sprint.deleteMany({ projectId: { $in: projectIds } }, { session });
       await DocumentModel.deleteMany({ workspaceId }, { session });
+      await TrashItem.deleteMany({ workspaceId }, { session });
       await ChangeHistory.deleteMany({ workspaceId }, { session });
       await Project.deleteMany({ workspaceId }, { session });
       await Workspace.deleteOne({ _id: workspaceId }, { session });

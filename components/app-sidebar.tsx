@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Check, ChevronsUpDown, FileText, House, ListChecks, Plus, SlidersHorizontal } from "lucide-react";
+import {
+  Check,
+  ChevronsUpDown,
+  FileText,
+  House,
+  ListChecks,
+  Plus,
+  SlidersHorizontal,
+  Trash2,
+} from "lucide-react";
 import { CommandMenuButton } from "./command-menu";
 import { NotificationBell } from "./notification-bell";
 import {
@@ -55,6 +64,7 @@ export function AppSidebar({ user, workspace, workspaces }: AppSidebarProps) {
       icon: SlidersHorizontal,
       active: pathname.startsWith(`${base}/settings`),
     },
+    { href: `${base}/trash`, label: "Lixeira", icon: Trash2, active: pathname === `${base}/trash` },
   ];
 
   return (

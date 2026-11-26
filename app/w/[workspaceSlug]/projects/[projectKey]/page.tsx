@@ -11,6 +11,7 @@ import { CreateTaskDialog } from "@/components/projects/create-task-dialog";
 import { ProjectMenu } from "@/components/projects/project-menu";
 import { Board as KanbanBoard } from "@/components/projects/board";
 import { TaskFilterBar } from "@/components/projects/task-filter-bar";
+import { collectTags } from "@/lib/task-filters";
 
 export default function BoardPage({ params }: PageProps<"/w/[workspaceSlug]/projects/[projectKey]">) {
   return (
@@ -56,7 +57,7 @@ async function Board({ params }: { params: Promise<{ workspaceSlug: string; proj
               projectId={project.id}
               statuses={project.statuses}
               trigger={
-                <Button>
+                <Button data-shortcut="c" aria-keyshortcuts="C" title="Nova tarefa (C)">
                   <Plus aria-hidden="true" />
                   Nova tarefa
                 </Button>
@@ -66,7 +67,7 @@ async function Board({ params }: { params: Promise<{ workspaceSlug: string; proj
         }
       />
 
-      <TaskFilterBar members={workspace.members} />
+      <TaskFilterBar members={workspace.members} tags={collectTags(project.tasks)} />
       <KanbanBoard
         projectId={project.id}
         statuses={project.statuses}

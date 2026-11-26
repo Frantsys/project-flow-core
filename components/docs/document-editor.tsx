@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check, Ellipsis, FilePlus, Trash2 } from "lucide-react";
 import { deleteDocumentAction, updateDocumentAction } from "@/server/actions/document.actions";
+import { undoToast } from "@/components/undo-toast";
 import { timeAgo } from "@/lib/history-format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -267,8 +268,8 @@ export function DocumentEditor({ doc, workspace, ancestors, childCount }: Docume
             <AlertDialogTitle>Excluir “{saved.title}”?</AlertDialogTitle>
             <AlertDialogDescription>
               {childCount > 0
-                ? `Os ${childCount} subdocumentos abaixo dele também serão excluídos. Não é possível desfazer.`
-                : "Não é possível desfazer."}
+                ? `Ele e os ${childCount} subdocumentos abaixo dele vão para a lixeira, onde podem ser restaurados por 30 dias.`
+                : "Ele vai para a lixeira, onde pode ser restaurado por 30 dias."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -282,7 +283,10 @@ export function DocumentEditor({ doc, workspace, ancestors, childCount }: Docume
                     toast.error(result.error);
                     return;
                   }
-                  toast.success("Documento excluído.");
+                  undoToast("Documento enviado para a lixeira.", result.data.trashId, (id) => {
+                    router.push(`/w/${workspace.slug}/docs/${id}`);
+                    router.refresh();
+                  });
                   const parent = ancestors.at(-1);
                   router.replace(
                     parent ? `/w/${workspace.slug}/docs/${parent.id}` : `/w/${workspace.slug}/docs`

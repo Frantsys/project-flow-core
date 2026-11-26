@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import mongoose, { Types } from "mongoose";
+import { Types } from "mongoose";
 import dbConnect from "@/lib/db";
 import { DocumentModel, Project } from "../db/models";
 import { createAction, fail } from "../lib/action";
 import { requirePermission } from "../lib/access";
 import { recordHistory } from "../services/history.service";
+import { trashDocuments } from "../services/trash.service";
 import { createDocumentSchema, documentIdSchema, updateDocumentSchema } from "../schemas";
 
 interface DocLean {
@@ -120,7 +121,7 @@ export const updateDocumentAction = createAction({
   },
 });
 
-/** Exclui o documento e todos os subdocumentos abaixo dele, numa transação. */
+/** Manda o documento e todos os subdocumentos abaixo dele para a lixeira (restauráveis por 30 dias). */
 export const deleteDocumentAction = createAction({
   name: "document.delete",
   schema: documentIdSchema,
@@ -138,15 +139,7 @@ export const deleteDocumentAction = createAction({
       ids.push(...frontier);
     }
 
-    let deleted = 0;
-    const session = await mongoose.startSession();
-    try {
-      await session.withTransaction(async () => {
-        deleted = (await DocumentModel.deleteMany({ _id: { $in: ids } }, { session })).deletedCount;
-      });
-    } finally {
-      await session.endSession();
-    }
+    const { id: trashId, deleted } = await trashDocuments(ids, doc, userId);
 
     await recordHistory({
       workspaceId: doc.workspaceId,
@@ -160,6 +153,6 @@ export const deleteDocumentAction = createAction({
     });
 
     revalidateDocs();
-    return { deleted };
+    return { deleted, trashId };
   },
 });

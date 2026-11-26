@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterTasks, hasFilters, parseTaskFilters } from "@/lib/task-filters";
+import { collectTags, filterTasks, hasFilters, parseTaskFilters } from "@/lib/task-filters";
 import type { TaskDTO } from "@/server/db/types";
 
 const task = (over: Partial<TaskDTO>): TaskDTO => ({
@@ -12,6 +12,7 @@ const task = (over: Partial<TaskDTO>): TaskDTO => ({
   priority: "MEDIUM",
   storyPoints: null,
   dueDate: null,
+  tags: [],
   sprint: null,
   assignee: null,
   ...over,
@@ -25,7 +26,7 @@ const tasks = [
     priority: "HIGH",
     assignee: { id: "eu", name: "Eu", image: null },
   }),
-  task({ id: "2", code: "PF-2", title: "Erro no quadro", type: "BUG" }),
+  task({ id: "2", code: "PF-2", title: "Erro no quadro", type: "BUG", tags: ["Front", "Urgente"] }),
   task({
     id: "3",
     code: "PF-3",
@@ -55,5 +56,11 @@ describe("filtros de tarefa", () => {
     expect(ids({ type: "BUG" })).toEqual(["2"]);
     expect(ids({ priority: "QUALQUER" })).toEqual(["1", "2", "3"]);
     expect(hasFilters(parseTaskFilters(() => null))).toBe(false);
+  });
+
+  it("filtra por etiqueta sem diferenciar maiúsculas e lista as etiquetas usadas", () => {
+    expect(ids({ tag: "front" })).toEqual(["2"]);
+    expect(ids({ tag: "nenhuma" })).toEqual([]);
+    expect(collectTags(tasks)).toEqual(["Front", "Urgente"]);
   });
 });

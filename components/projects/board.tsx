@@ -33,6 +33,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { TaskTypeIndicator } from "./task-type";
 import { CreateTaskDialog } from "./create-task-dialog";
 import { TaskStatusMenu } from "./task-status-menu";
+import { TagChip } from "@/components/tasks/task-tags";
 
 type Columns = Record<string, TaskDTO[]>;
 
@@ -319,6 +320,15 @@ function SortableTaskCard({
             {task.title}
           </Link>
         </CardTitle>
+        {task.tags.length > 0 && (
+          <ul className="flex flex-wrap gap-1" aria-label="Etiquetas">
+            {task.tags.map((tag) => (
+              <li key={tag}>
+                <TagChip tag={tag} />
+              </li>
+            ))}
+          </ul>
+        )}
         <div className="flex items-center gap-2 text-xs text-text-secondary">
           {task.storyPoints !== null && (
             <Badge variant="outline" className="h-5 px-1.5">

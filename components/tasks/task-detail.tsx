@@ -1,6 +1,8 @@
 "use client";
 
 import { DateField } from "@/components/date-field";
+import { TagsEditor } from "./task-tags";
+import { undoToast } from "@/components/undo-toast";
 import { can } from "@/lib/permissions";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -313,6 +315,19 @@ export function TaskDetail({
               onChange={(iso) => update({ dueDate: iso || null })}
             />
           </dd>
+
+          <dt className="text-[13px] text-muted-foreground">
+            <label htmlFor="task-tags">Etiquetas</label>
+          </dt>
+          <dd>
+            <TagsEditor
+              id="task-tags"
+              tags={task.tags}
+              suggestions={task.projectTags}
+              disabled={pending}
+              onChange={(tags) => update({ tags })}
+            />
+          </dd>
         </dl>
 
         {(aiEnabled || task.aiSummary) && <AiSummary taskId={task.id} summary={task.aiSummary} />}
@@ -451,7 +466,8 @@ export function TaskDetail({
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir {task.code}?</AlertDialogTitle>
             <AlertDialogDescription>
-              “{task.title}” será excluída com as subtarefas e os comentários. Não é possível desfazer.
+              “{task.title}” vai para a lixeira com as subtarefas e os comentários. Dá para restaurar por 30
+              dias.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -459,13 +475,15 @@ export function TaskDetail({
             <AlertDialogAction
               variant="destructive"
               onClick={() =>
-                run(
-                  () => deleteTaskAction({ taskId: task.id }),
-                  () => {
-                    toast.success(`${task.code} excluída.`);
-                    router.replace(boardUrl);
-                  }
-                )
+                startTransition(async () => {
+                  const result = await deleteTaskAction({ taskId: task.id });
+                  if (!result.success) return void toast.error(result.error);
+                  undoToast(`${task.code} foi para a lixeira.`, result.data.trashId, () =>
+                    router.push(`${boardUrl}/tasks/${task.code}`, { scroll: false })
+                  );
+                  router.replace(boardUrl);
+                  router.refresh();
+                })
               }
             >
               Excluir tarefa

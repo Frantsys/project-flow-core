@@ -62,3 +62,20 @@ export const todayInBrazil = () =>
 export function fullDate(iso: string) {
   return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(iso));
 }
+
+// fundo claro com texto escuro (e o inverso no tema escuro): contraste acima de 4,5:1 nas seis cores
+const TAG_COLORS = [
+  "bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-200",
+  "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200",
+  "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
+  "bg-rose-100 text-rose-900 dark:bg-rose-950 dark:text-rose-200",
+  "bg-violet-100 text-violet-900 dark:bg-violet-950 dark:text-violet-200",
+  "bg-teal-100 text-teal-900 dark:bg-teal-950 dark:text-teal-200",
+];
+
+/** Cor fixa por etiqueta, tirada do próprio nome: "bug" tem sempre a mesma cor em todo lugar. */
+export function tagColor(tag: string) {
+  let hash = 0;
+  for (const ch of tag.toLocaleLowerCase("pt-BR")) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return TAG_COLORS[hash % TAG_COLORS.length]!;
+}

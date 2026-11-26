@@ -136,6 +136,17 @@ test("roteiro completo de um time novo", async ({ page }) => {
     await expect(page.getByText("Convites pendentes (1)")).toBeVisible();
   });
 
+  await test.step("excluir manda para a lixeira e Desfazer devolve", async () => {
+    await page.getByRole("link", { name: "Portal do Cliente" }).first().click();
+    await page.getByRole("link", { name: "Tela de login do portal" }).click();
+    await page.getByRole("button", { name: "Mais ações" }).last().click();
+    await page.getByRole("menuitem", { name: "Excluir tarefa" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Excluir tarefa" }).click();
+    await page.getByRole("button", { name: "Desfazer" }).click();
+    await expect(page).toHaveURL(/\/tasks\/PC-1$/);
+    await expect(page.getByText("Restaurado.")).toBeVisible();
+  });
+
   await test.step("busca global encontra a tarefa", async () => {
     await page.keyboard.press("Control+k");
     await page.getByPlaceholder("Buscar tarefas, projetos, documentos…").fill("tela de login");

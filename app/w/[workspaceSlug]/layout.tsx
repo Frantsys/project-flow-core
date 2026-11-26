@@ -6,6 +6,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { Logo } from "@/components/logo";
 import { DemoBanner } from "@/components/demo-banner";
 import { Buddy } from "@/components/buddy";
+import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { aiEnabled } from "@/server/lib/ai";
 import { getWorkspace, requireUser } from "@/lib/session";
 import { getUserWorkspaces } from "@/server/services/workspace.service";
@@ -32,6 +33,9 @@ export default function WorkspaceLayout({ children, params }: LayoutProps<"/w/[w
       </SidebarInset>
       <Suspense fallback={null}>
         <BuddyGate />
+      </Suspense>
+      <Suspense fallback={null}>
+        <KeyboardShortcuts />
       </Suspense>
     </SidebarProvider>
   );

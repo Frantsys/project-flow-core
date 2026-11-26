@@ -204,6 +204,12 @@ export const updateTaskSchema = z.object({
     .optional(),
   assigneeId: nullableObjectId.optional(),
   sprintId: nullableObjectId.optional(),
+  tags: z
+    .array(z.string().trim().min(1).max(30, "Use etiquetas de até 30 caracteres."))
+    .max(10, "Use no máximo 10 etiquetas.")
+    // sem repetir a mesma etiqueta com outra caixa ("Bug" e "bug")
+    .transform((tags) => [...new Map(tags.map((t) => [t.toLocaleLowerCase("pt-BR"), t])).values()])
+    .optional(),
 });
 
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
@@ -372,4 +378,8 @@ export const moveTaskSchema = z.object({
 
 export const aiSubtasksSchema = taskIdSchema.extend({
   titles: z.array(z.string().trim().min(1).max(200)).min(1, "Escolha ao menos uma subtarefa.").max(10),
+});
+
+export const trashItemIdSchema = z.object({
+  trashId: z.string().regex(objectIdRegex, "Item inválido."),
 });

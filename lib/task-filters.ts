@@ -7,6 +7,7 @@ export interface TaskFilters {
   assignee: string | null;
   priority: TaskPriority | null;
   type: TaskType | null;
+  tag: string | null;
 }
 
 const PRIORITIES: TaskPriority[] = ["LOW", "MEDIUM", "HIGH", "URGENT"];
@@ -21,10 +22,15 @@ export function parseTaskFilters(get: (key: string) => string | null | undefined
     assignee: get("assignee") || null,
     priority: oneOf(get("priority"), PRIORITIES),
     type: oneOf(get("type"), TYPES),
+    tag: get("tag")?.trim().slice(0, 30) || null,
   };
 }
 
-export const hasFilters = (f: TaskFilters) => !!(f.q || f.assignee || f.priority || f.type);
+export const hasFilters = (f: TaskFilters) => !!(f.q || f.assignee || f.priority || f.type || f.tag);
+
+/** Etiquetas usadas nas tarefas, sem repetir, em ordem alfabética (para o filtro). */
+export const collectTags = (tasks: Pick<TaskDTO, "tags">[]) =>
+  [...new Set(tasks.flatMap((t) => t.tags))].sort((a, b) => a.localeCompare(b, "pt-BR"));
 
 // busca sem diferenciar maiúsculas nem acentos ("revisao" encontra "Revisão")
 export const normalizeText = (s: string) =>
@@ -39,6 +45,7 @@ export function filterTasks(tasks: TaskDTO[], f: TaskFilters, currentUserId: str
     if (q && !normalizeText(`${t.code} ${t.title}`).includes(q)) return false;
     if (f.priority && t.priority !== f.priority) return false;
     if (f.type && t.type !== f.type) return false;
+    if (f.tag && !t.tags.some((tag) => normalizeText(tag) === normalizeText(f.tag!))) return false;
     if (f.assignee === "me" && t.assignee?.id !== currentUserId) return false;
     if (f.assignee === "none" && t.assignee) return false;
     if (f.assignee && f.assignee !== "me" && f.assignee !== "none" && t.assignee?.id !== f.assignee)

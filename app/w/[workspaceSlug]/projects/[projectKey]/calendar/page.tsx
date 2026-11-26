@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getWorkspace, requireUser } from "@/lib/session";
 import { getProjectByKey } from "@/server/services/project.service";
-import { filterTasks, parseTaskFilters } from "@/lib/task-filters";
+import { collectTags, filterTasks, parseTaskFilters } from "@/lib/task-filters";
 import { cn } from "@/lib/utils";
 import type { TaskDTO } from "@/server/db/types";
 import { Button } from "@/components/ui/button";
@@ -111,7 +111,7 @@ async function Calendar({
   return (
     <div className="flex min-w-0 flex-col gap-5 p-6 md:p-8">
       <ProjectHeader workspace={workspace} project={project} view="calendar" />
-      <TaskFilterBar members={workspace.members} />
+      <TaskFilterBar members={workspace.members} tags={collectTags(project.tasks)} />
 
       <div className="flex flex-wrap items-center gap-2">
         <Button asChild variant="outline" size="icon" aria-label="Mês anterior">

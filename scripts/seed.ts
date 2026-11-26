@@ -236,6 +236,9 @@ async function main() {
         storyPoints,
         statusId,
         dueDate: due,
+        // etiquetas por tema, para o quadro e o filtro terem o que mostrar
+        tags:
+          type === "BUG" ? ["bug", "qualidade"] : i % 3 === 1 ? ["frontend"] : i % 3 === 2 ? ["backend"] : [],
         description:
           i % 3 === 0
             ? `Contexto: ${title.toLowerCase()}.\n\nCritérios de aceite:\n- funciona no celular\n- tem teste`
