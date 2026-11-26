@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SessionProvider, signIn, signOut, useSession } from "next-auth/react";
@@ -43,21 +43,81 @@ const PROVIDERS = [
 ] as const;
 
 export function AccountSettings({ account }: { account: AccountDTO }) {
+  const sections = [
+    { id: "perfil", label: "Perfil", card: <ProfileCard name={account.name} /> },
+    {
+      id: "email",
+      label: "E-mail",
+      card: <EmailCard email={account.email} verified={account.emailVerified} />,
+    },
+    {
+      id: "notificacoes",
+      label: "Notificações",
+      card: <NotificationsCard notifyByEmail={account.notifyByEmail} />,
+    },
+    {
+      id: "senha",
+      label: "Senha",
+      card: <PasswordCard email={account.email} hasPassword={account.hasPassword} />,
+    },
+    // a verificação em duas etapas protege o login com senha; sem senha não há o que proteger
+    ...(account.hasPassword
+      ? [
+          {
+            id: "duas-etapas",
+            label: "Duas etapas",
+            card: (
+              <TwoFactorCard
+                enabled={account.twoFactorEnabled}
+                recoveryCodesLeft={account.recoveryCodesLeft}
+              />
+            ),
+          },
+        ]
+      : []),
+    { id: "contas", label: "Contas", card: <ProvidersCard providers={account.providers} /> },
+    { id: "sessoes", label: "Sessões", card: <SessionsCard /> },
+    {
+      id: "excluir",
+      label: "Excluir",
+      card: <DeleteAccountCard email={account.email} ownedWorkspaces={account.ownedWorkspaces} />,
+    },
+  ];
+
+  // as seções chegam por streaming, depois de o navegador procurar a âncora: rola aqui (/account#senha)
+  useEffect(() => {
+    if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
+  }, []);
+
   return (
     // só esta tela precisa do provider: é ele que atualiza o nome guardado na sessão
     <SessionProvider>
+      {/* página longa: o índice fica preso no topo e leva direto a cada seção (o link também serve
+          para mandar alguém para /account#senha) */}
+      <nav
+        aria-label="Seções da conta"
+        className="sticky top-0 z-10 -mx-2 -mt-2 bg-sidebar/95 px-2 py-2 backdrop-blur supports-backdrop-filter:bg-sidebar/80"
+      >
+        <ul className="flex gap-1.5 overflow-x-auto">
+          {sections.map((s) => (
+            <li key={s.id} className="shrink-0">
+              <a
+                href={`#${s.id}`}
+                className="inline-flex h-8 items-center rounded-md border bg-background px-3 text-sm whitespace-nowrap text-text-secondary outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                {s.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
       <div className="flex flex-col gap-6">
-        <ProfileCard name={account.name} />
-        <EmailCard email={account.email} verified={account.emailVerified} />
-        <NotificationsCard notifyByEmail={account.notifyByEmail} />
-        <PasswordCard email={account.email} hasPassword={account.hasPassword} />
-        {/* a verificação em duas etapas protege o login com senha; sem senha não há o que proteger */}
-        {account.hasPassword && (
-          <TwoFactorCard enabled={account.twoFactorEnabled} recoveryCodesLeft={account.recoveryCodesLeft} />
-        )}
-        <ProvidersCard providers={account.providers} />
-        <SessionsCard />
-        <DeleteAccountCard email={account.email} ownedWorkspaces={account.ownedWorkspaces} />
+        {sections.map((s) => (
+          // scroll-mt: a seção para abaixo do índice preso, não atrás dele
+          <div key={s.id} id={s.id} className="scroll-mt-16">
+            {s.card}
+          </div>
+        ))}
       </div>
     </SessionProvider>
   );
