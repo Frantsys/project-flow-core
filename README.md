@@ -120,6 +120,7 @@ O seed recusa rodar no banco de produção (`project-flow`).
 | -------------------------- | ----------------------------------------------------------------- |
 | `npm run dev`              | servidor de desenvolvimento                                       |
 | `npm test`                 | testes (Vitest + MongoDB em memória)                              |
+| `npm run test:e2e`         | ponta a ponta no navegador (Playwright + axe), depois do build    |
 | `npm run typecheck`        | gera os tipos das rotas e roda o TypeScript                       |
 | `npm run lint`             | ESLint                                                            |
 | `npm run format`           | Prettier                                                          |

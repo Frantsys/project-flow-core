@@ -606,17 +606,17 @@ Tudo que o plano previa e ainda não existe, agrupado pelo que destrava cada ite
 
 ### Precisa de uma ação sua (conta, chave ou configuração)
 
-| Item                                 | O que falta                                                                                     | Etapa         |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------- | ------------- |
-| E-mails de verdade                   | `RESEND_API_KEY` na Vercel; para enviar a qualquer pessoa, um domínio verificado e `EMAIL_FROM` | 1.3, 3.6, 5.2 |
-| IA na tarefa                         | `ANTHROPIC_API_KEY` na Vercel (o código já está em produção, escondido)                         | 8.1, 8.2      |
-| Deploy por PR e testes ponta a ponta | ligar a Vercel ao GitHub e proteger a `main` (exigir PR e CI verde)                             | 0.2, 0.4      |
-| Métricas de uso e desempenho         | ligar Web Analytics e Speed Insights no painel da Vercel                                        | 7.1           |
-| Tempo real                           | conta gratuita no Pusher ou Ably                                                                | 5.3           |
-| Anexos e fotos                       | Blob store na Vercel (cria uma chave de acesso)                                                 | 3.5, 6.4      |
-| Erros e logs                         | conta no Sentry e um log drain (Axiom ou Better Stack)                                          | 2.5           |
-| Jobs agendados                       | `CRON_SECRET` na Vercel para proteger as rotas de cron                                          | 2.6           |
-| Segredos OAuth                       | confirmar que os do Google e do GitHub foram trocados                                           | 1.8           |
+| Item                         | O que falta                                                                                     | Etapa         |
+| ---------------------------- | ----------------------------------------------------------------------------------------------- | ------------- |
+| E-mails de verdade           | `RESEND_API_KEY` na Vercel; para enviar a qualquer pessoa, um domínio verificado e `EMAIL_FROM` | 1.3, 3.6, 5.2 |
+| IA na tarefa                 | `ANTHROPIC_API_KEY` na Vercel (o código já está em produção, escondido)                         | 8.1, 8.2      |
+| Deploy de preview por PR     | ligar a Vercel ao GitHub e proteger a `main` (exigir PR e CI verde)                             | 0.2, 0.4      |
+| Métricas de uso e desempenho | ligar Web Analytics e Speed Insights no painel da Vercel                                        | 7.1           |
+| Tempo real                   | conta gratuita no Pusher ou Ably                                                                | 5.3           |
+| Anexos e fotos               | Blob store na Vercel (cria uma chave de acesso)                                                 | 3.5, 6.4      |
+| Erros e logs                 | conta no Sentry e um log drain (Axiom ou Better Stack)                                          | 2.5           |
+| Jobs agendados               | `CRON_SECRET` na Vercel para proteger as rotas de cron                                          | 2.6           |
+| Segredos OAuth               | confirmar que os do Google e do GitHub foram trocados                                           | 1.8           |
 
 ### Dá para fazer só com código
 
@@ -661,8 +661,8 @@ Tudo que o plano previa e ainda não existe, agrupado pelo que destrava cada ite
 
 ### Ordem sugerida
 
-1. **Ligar a Vercel ao GitHub e escrever os testes ponta a ponta (Playwright).** É o que mais protege
-   tudo o que já existe: cada PR passa a ter preview e roteiro testado.
+1. ~~Testes ponta a ponta (Playwright)~~ **feito**: roteiro completo e axe em `e2e/`, rodando na CI.
+   Falta ligar a Vercel ao GitHub para ter preview por PR.
 2. **Encerrar sessões ao trocar a senha.** É a lacuna de segurança mais concreta que sobrou.
 3. **Resend e Anthropic.** Duas chaves que acendem recursos já prontos (convites, recuperação de senha,
    notificações por e-mail e IA).
